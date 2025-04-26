@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+        // Palette de couleurs de Prompt Fighter
+        promptfighter: {
+          pink: '#FF87A1',
+          cyan: '#3CE7F0',
+          lavender: '#EFD8FF',
+          navy: '#231955',
+        }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,12 +92,21 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+        'pulse-glow': {
+          '0%, 100%': { boxShadow: '0 0 20px 5px rgba(255, 135, 161, 0.4)' },
+          '50%': { boxShadow: '0 0 30px 10px rgba(60, 231, 240, 0.6)' },
+        }
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+        'pulse-glow': 'pulse-glow 3s infinite',
+			},
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-game': 'linear-gradient(to right bottom, #231955, #493990, #7b58ca, #b575ff, #efd8ff)',
+      }
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
