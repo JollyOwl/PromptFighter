@@ -68,13 +68,14 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
     setTimeout(() => {
       // Dans une implémentation réelle, nous appellerions une API d'IA ici
       const newImage = "/placeholder.svg";
-      setGeneratedImages(prev => [...prev, newImage]);
+      const updatedImages = [...generatedImages, newImage];
+      setGeneratedImages(updatedImages);
       
       // Simuler un score d'accuracy
       const randomScore = Math.floor(Math.random() * 70) + 30; // Entre 30 et 100
       setAccuracyScore(randomScore);
       
-      // Sélectionner automatiquement la première image
+      // Sélectionner automatiquement la première image générée si aucune n'est déjà sélectionnée
       if (!selectedImage) {
         setSelectedImage(newImage);
       }
@@ -199,7 +200,7 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
                 
                 <div className="flex justify-between items-center">
                   <span className="text-white/70 text-sm">
-                    Image {generatedImages.indexOf(selectedImage || "") + 1} sélectionnée
+                    {selectedImage ? `Image ${generatedImages.indexOf(selectedImage) + 1} sélectionnée` : "Aucune image sélectionnée"}
                   </span>
                   <span className="text-white font-bold">
                     Accuracy: {accuracyScore}%
