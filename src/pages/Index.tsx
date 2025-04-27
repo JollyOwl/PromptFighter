@@ -1,20 +1,22 @@
-
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 import AuthForm from "@/components/AuthForm";
 import GameLobby from "@/components/GameLobby";
 import GameRules from "@/components/GameRules";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 
 const Index = () => {
-  // Dans une implémentation réelle, cet état serait géré avec Supabase Auth
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, loading } = useAuth();
   const [showRules, setShowRules] = useState(false);
-  
-  // Simulation de login
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-game">
+        <div className="text-white text-2xl">Chargement...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-game">
@@ -32,8 +34,8 @@ const Index = () => {
         {/* Contenu principal - soit auth, soit lobby */}
         <Card className="w-full max-w-4xl bg-white/20 backdrop-blur-lg border-white/20 shadow-xl">
           <CardContent className="p-6">
-            {!isAuthenticated ? (
-              <AuthForm onLogin={handleLogin} />
+            {!user ? (
+              <AuthForm onLogin={() => {}} />
             ) : showRules ? (
               <GameRules onBack={() => setShowRules(false)} />
             ) : (
