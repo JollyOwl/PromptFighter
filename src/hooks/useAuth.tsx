@@ -2,25 +2,46 @@
 import { useEffect, useState } from 'react';
 import { AuthUser, getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Vérifier l'utilisateur courant
-    getCurrentUser().then(user => {
-      setUser(user);
-      setLoading(false);
-    });
+    // S'abonner aux changements d'auth d'abord
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        console.log("Auth state change:", event);
+        setSession(currentSession);
+        
+        // Utiliser setTimeout pour éviter les deadlocks potentiels
+        if (currentSession?.user) {
+          setTimeout(() => {
+            getCurrentUser().then(authUser => {
+              if (authUser) setUser(authUser);
+              else setUser(null);
+            });
+          }, 0);
+        } else {
+          setUser(null);
+        }
+      }
+    );
 
-    // S'abonner aux changements d'auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'SIGNED_IN') {
-        const user = await getCurrentUser();
-        setUser(user);
-      } else if (event === 'SIGNED_OUT') {
+    // Ensuite vérifier la session existante
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      
+      if (data.session?.user) {
+        getCurrentUser().then(authUser => {
+          if (authUser) setUser(authUser);
+          setLoading(false);
+        });
+      } else {
         setUser(null);
+        setLoading(false);
       }
     });
 
@@ -29,5 +50,5 @@ export function useAuth() {
     };
   }, []);
 
-  return { user, loading };
+  return { user, session, loading };
 }
