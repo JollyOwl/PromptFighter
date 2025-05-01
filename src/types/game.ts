@@ -22,6 +22,7 @@ export interface GameRoom {
   players: Player[];
   join_code: string;
   max_players: number;
+  playerCount?: number; // Optional field for UI convenience
 }
 
 export interface GameSubmission {

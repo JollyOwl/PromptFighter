@@ -12,7 +12,7 @@ import GameRoomCreation from "./GameRoomCreation";
 import WaitingRoom from "./WaitingRoom";
 import { toast } from "sonner";
 import { useGameStore } from "@/store/gameStore";
-import { GameRoom } from "@/types/game";
+import { GameRoom, Player } from "@/types/game";
 import { useAuth } from "@/hooks/useAuth";
 import { createGameRoom, joinGameRoom, leaveGameRoom } from "@/services/gameService";
 import { supabase } from "@/lib/supabase";
@@ -89,13 +89,23 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
         
       if (error) throw error;
       
-      // Transform to get player count
-      const roomsWithPlayerCount = data.map(room => ({
-        ...room,
-        playerCount: room.game_players ? room.game_players.length : 0
+      // Transform to match GameRoom interface
+      const roomsWithPlayers: GameRoom[] = data.map(room => ({
+        id: room.id,
+        name: room.name,
+        created_at: room.created_at,
+        owner_id: room.owner_id,
+        game_mode: room.game_mode,
+        difficulty: room.difficulty,
+        status: room.status,
+        target_image_url: room.target_image_url || '',
+        join_code: room.join_code,
+        max_players: room.max_players,
+        players: [], // Initialize empty array, we'll get player details if needed
+        playerCount: room.game_players ? room.game_players.length : 0 // Custom property for UI only
       }));
       
-      setAvailableRooms(roomsWithPlayerCount);
+      setAvailableRooms(roomsWithPlayers);
     } catch (error) {
       console.error("Error fetching available rooms:", error);
     }
@@ -134,7 +144,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
     }
   };
 
-  const handleQuickJoin = async (room: any) => {
+  const handleQuickJoin = async (room: GameRoom) => {
     if (!user) {
       toast.error("Please log in to join a game room");
       return;
@@ -281,7 +291,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
                               <span className="text-sm text-white">{room.name}</span>
                             </div>
                             <Badge className="bg-promptfighter-pink text-white">
-                              {room.playerCount}/{room.max_players}
+                              {room.playerCount || 0}/{room.max_players}
                             </Badge>
                           </div>
                           <div className="flex items-center justify-between">
