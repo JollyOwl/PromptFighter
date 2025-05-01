@@ -1,4 +1,3 @@
-
 -- Schéma de base de données pour l'application Prompt Fighter
 
 -- Table des profils utilisateurs
@@ -21,6 +20,10 @@ CREATE POLICY "Les profils sont visibles par tous les utilisateurs authentifiés
 CREATE POLICY "Les utilisateurs peuvent modifier leur propre profil"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
+
+CREATE POLICY "Les utilisateurs peuvent créer leur propre profil"
+  ON profiles FOR INSERT
+  WITH CHECK (auth.uid() = id);
 
 -- Table pour les salles de jeu
 CREATE TABLE game_rooms (

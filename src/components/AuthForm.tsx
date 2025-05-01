@@ -74,18 +74,19 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
   };
 
   return (
-    <Tabs defaultValue="login" className="w-full">
+    <Tabs defaultValue="login" 
+    className="w-full"
+    onValueChange={(value) => setIsLogin(value === "login")}
+    >
       <TabsList className="grid w-full grid-cols-2 mb-6">
         <TabsTrigger 
           value="login" 
-          onClick={() => setIsLogin(true)}
           className="text-lg"
         >
           Connexion
         </TabsTrigger>
         <TabsTrigger 
           value="register" 
-          onClick={() => setIsLogin(false)}
           className="text-lg"
         >
           Inscription

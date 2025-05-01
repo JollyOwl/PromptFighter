@@ -81,26 +81,41 @@ export async function signUp({ email, password, username, avatar_id }: SignUpCre
     const avatar_url = "/placeholder.svg";
     
     // Créer un profil pour l'utilisateur
-    const { error: profileError } = await supabase
+    // Vérifie si le profil existe déjà (par précaution, pour éviter l'erreur 409 si déjà présent)
+    const { data: existingProfile, error: fetchError } = await supabase
       .from('profiles')
-      .insert({
-        id: user.id,
-        username,
-        avatar_url,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-      
-    if (profileError) {
-      console.error("Erreur lors de la création du profil:", profileError);
-      throw profileError;
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("Erreur lors de la vérification du profil:", fetchError);
+      throw fetchError;
     }
+
+    if (!existingProfile) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          username,
+          avatar_url,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (profileError) {
+        console.error("Erreur lors de la création du profil:", profileError);
+        throw profileError;
+      }
+    }
+
     
     toast.success("Inscription réussie !");
     return { user, profile: { username, avatar_url } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erreur lors de l'inscription:", error);
-    toast.error(error.message || "Échec de l'inscription");
+    toast.error(error instanceof Error ? error.message : "Échec de l'inscription");
     throw error;
   }
 }
@@ -121,9 +136,9 @@ export async function signIn({ email, password }: SignInCredentials) {
     
     toast.success("Connexion réussie !");
     return data.user;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erreur lors de la connexion:", error);
-    toast.error(error.message || "Échec de la connexion");
+    toast.error(error instanceof Error ? error.message : "Échec de la connexion");
     throw error;
   }
 }
@@ -137,9 +152,9 @@ export async function signOut() {
     }
     
     toast.success("Déconnexion réussie !");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erreur lors de la déconnexion:", error);
-    toast.error(error.message || "Échec de la déconnexion");
+    toast.error(error instanceof Error ? error.message : "Échec de la connexion");
     throw error;
   }
 }
