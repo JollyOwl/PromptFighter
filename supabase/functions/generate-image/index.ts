@@ -1,97 +1,61 @@
 
-// Nom du fichier: supabase/functions/generate-image/index.ts
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-interface DalleRequest {
-  prompt: string;
-  n?: number;
-  size?: "256x256" | "512x512" | "1024x1024";
-}
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-interface DalleResponse {
-  created: number;
-  data: {
-    url: string;
-  }[];
+// Mock image generation function
+// In production, this would call an AI image generation service
+async function generateImage(prompt: string): Promise<string> {
+  // For demo purposes, return a placeholder image
+  // In a real app, you would call DALL-E or another image generation API
+  const placeholderImages = [
+    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809',
+    'https://images.unsplash.com/photo-1533738363-b7f9aef128ce', 
+    'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634',
+    'https://images.unsplash.com/photo-1520288992255-dfb30894896b',
+    'https://images.unsplash.com/photo-1518791841217-8f162f1e1131'
+  ];
+  
+  // Select a random image from the array
+  const randomIndex = Math.floor(Math.random() * placeholderImages.length);
+  return placeholderImages[randomIndex];
 }
 
 serve(async (req) => {
-  // Gérer les requêtes préliminaires CORS (OPTIONS)
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
-    const { prompt, n = 1, size = "512x512" } = await req.json() as DalleRequest;
+    const { prompt } = await req.json();
     
-    // Vérifier que le prompt est fourni
     if (!prompt) {
       return new Response(
-        JSON.stringify({ error: "Le prompt est requis" }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
+        JSON.stringify({ error: 'Prompt is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Récupérer la clé API depuis les variables d'environnement
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "Configuration incorrecte: clé API manquante" }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
-    }
+    // Generate image URL
+    const imageUrl = await generateImage(prompt);
     
-    // Appeler l'API DALL-E de OpenAI
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    return new Response(
+      JSON.stringify({ 
+        imageUrl,
         prompt,
-        n,
-        size,
+        timestamp: new Date().toISOString()
       }),
-    });
-    
-    const data = await response.json();
-    
-    // Gérer les erreurs de l'API
-    if (!response.ok) {
-      return new Response(
-        JSON.stringify({ error: data.error || "Erreur lors de la génération d'image" }),
-        { 
-          status: response.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
-    }
-    
-    // Retourner l'URL de l'image générée
-    return new Response(
-      JSON.stringify({ url: data.data[0].url }),
-      { 
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-    
   } catch (error) {
-    console.error("Erreur:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Erreur interne du serveur" }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

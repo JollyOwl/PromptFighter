@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,11 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Timer, Check, Trophy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { generateAIImage } from "@/services/gameService";
+import { useAuth } from "@/hooks/useAuth";
 
 interface GameSimulatorProps {
   onExit: () => void;
   gameMode: string;
   difficulty: string;
+  targetImage?: string;
 }
 
 // Temps de jeu selon la difficulté (en secondes)
@@ -20,7 +22,8 @@ const difficultyTimes = {
   hard: 60
 };
 
-const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => {
+const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimulatorProps) => {
+  const { user } = useAuth();
   const [gamePhase, setGamePhase] = useState<"playing" | "voting" | "results">("playing");
   const [timeLeft, setTimeLeft] = useState(difficultyTimes[difficulty as keyof typeof difficultyTimes]);
   const [prompt, setPrompt] = useState("");
@@ -29,8 +32,8 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [accuracyScore, setAccuracyScore] = useState(0);
   
-  // Simuler l'image modèle
-  const targetImage = "/placeholder.svg";
+  // Use the provided target image or fallback to placeholder
+  const targetImageUrl = targetImage || "/placeholder.svg";
   
   // Compter à rebours
   useEffect(() => {
@@ -55,8 +58,8 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
   
-  // Simuler la génération d'image
-  const generateImage = () => {
+  // Generate image using our edge function
+  const handleGenerateImage = async () => {
     if (!prompt.trim()) {
       toast.error("Veuillez saisir un prompt");
       return;
@@ -64,25 +67,30 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
     
     setLoading(true);
     
-    // Simuler un délai de génération
-    setTimeout(() => {
-      // Dans une implémentation réelle, nous appellerions une API d'IA ici
-      const newImage = "/placeholder.svg";
-      const updatedImages = [...generatedImages, newImage];
-      setGeneratedImages(updatedImages);
+    try {
+      const imageUrl = await generateAIImage(prompt);
       
-      // Simuler un score d'accuracy
-      const randomScore = Math.floor(Math.random() * 70) + 30; // Entre 30 et 100
-      setAccuracyScore(randomScore);
-      
-      // Sélectionner automatiquement la première image générée si aucune n'est déjà sélectionnée
-      if (!selectedImage) {
-        setSelectedImage(newImage);
+      if (imageUrl) {
+        const updatedImages = [...generatedImages, imageUrl];
+        setGeneratedImages(updatedImages);
+        
+        // Simuler un score d'accuracy
+        const randomScore = Math.floor(Math.random() * 70) + 30; // Entre 30 et 100
+        setAccuracyScore(randomScore);
+        
+        // Sélectionner automatiquement la première image générée si aucune n'est déjà sélectionnée
+        if (!selectedImage) {
+          setSelectedImage(imageUrl);
+        }
+        
+        toast.success("Image générée avec succès!");
       }
-      
+    } catch (error) {
+      console.error('Error generating image:', error);
+      toast.error("Erreur lors de la génération de l'image");
+    } finally {
       setLoading(false);
-      toast.success("Image générée avec succès!");
-    }, 2000);
+    }
   };
   
   // Simuler le passage à la phase de résultats
@@ -118,7 +126,7 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
             <h2 className="text-xl font-bold text-white">Image modèle</h2>
             <Card className="overflow-hidden bg-white/10 border-white/10">
               <div className="aspect-square flex items-center justify-center bg-gradient-to-br from-promptfighter-navy to-promptfighter-pink/30">
-                <img src={targetImage} alt="Target" className="object-contain max-h-full" />
+                <img src={targetImageUrl} alt="Target" className="object-contain max-h-full" />
               </div>
             </Card>
             
@@ -157,7 +165,7 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
               />
               
               <Button 
-                onClick={generateImage}
+                onClick={handleGenerateImage}
                 disabled={loading || !prompt.trim()}
                 className="w-full bg-promptfighter-cyan hover:bg-promptfighter-cyan/90 text-promptfighter-navy font-bold"
               >
@@ -223,7 +231,7 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
               <CardContent className="p-4">
                 <h3 className="text-lg font-bold text-white mb-3">Image modèle</h3>
                 <div className="aspect-square flex items-center justify-center bg-gradient-to-br from-promptfighter-navy to-promptfighter-pink/30">
-                  <img src={targetImage} alt="Target" className="object-contain max-h-full" />
+                  <img src={targetImageUrl} alt="Target" className="object-contain max-h-full" />
                 </div>
               </CardContent>
             </Card>
@@ -313,7 +321,7 @@ const GameSimulator = ({ onExit, gameMode, difficulty }: GameSimulatorProps) => 
                 <div>
                   <h4 className="text-lg font-bold text-white mb-2">Image modèle</h4>
                   <div className="aspect-square bg-white/5 rounded-lg flex items-center justify-center">
-                    <img src={targetImage} alt="Target" className="object-contain max-h-full" />
+                    <img src={targetImageUrl} alt="Target" className="object-contain max-h-full" />
                   </div>
                 </div>
                 

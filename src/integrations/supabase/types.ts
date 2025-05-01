@@ -9,7 +9,154 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      active_sessions: {
+        Row: {
+          id: string
+          last_activity: string | null
+          room_id: string | null
+          start_time: string | null
+        }
+        Insert: {
+          id?: string
+          last_activity?: string | null
+          room_id?: string | null
+          start_time?: string | null
+        }
+        Update: {
+          id?: string
+          last_activity?: string | null
+          room_id?: string | null
+          start_time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "game_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_players: {
+        Row: {
+          id: string
+          joined_at: string | null
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "game_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_rooms: {
+        Row: {
+          created_at: string | null
+          difficulty: string
+          game_mode: string
+          id: string
+          join_code: string
+          max_players: number
+          name: string
+          owner_id: string
+          status: string
+          target_image_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          difficulty: string
+          game_mode: string
+          id?: string
+          join_code: string
+          max_players?: number
+          name: string
+          owner_id: string
+          status?: string
+          target_image_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          difficulty?: string
+          game_mode?: string
+          id?: string
+          join_code?: string
+          max_players?: number
+          name?: string
+          owner_id?: string
+          status?: string
+          target_image_url?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          id: string
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      target_images: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          difficulty: string
+          id: string
+          name: string
+          url: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          difficulty: string
+          id?: string
+          name: string
+          url: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          difficulty?: string
+          id?: string
+          name?: string
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

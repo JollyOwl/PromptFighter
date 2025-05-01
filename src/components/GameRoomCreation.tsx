@@ -11,7 +11,7 @@ import { Users, Copy, ArrowRight } from "lucide-react";
 import { useGameStore } from "@/store/gameStore";
 
 interface GameRoomCreationProps {
-  onCreateRoom: (roomName: string) => void;
+  onCreateRoom: (roomName: string, maxPlayers: number) => void;
   onJoinRoom: (joinCode: string) => void;
   onCancel: () => void;
 }
@@ -19,6 +19,7 @@ interface GameRoomCreationProps {
 const GameRoomCreation = ({ onCreateRoom, onJoinRoom, onCancel }: GameRoomCreationProps) => {
   const [roomName, setRoomName] = useState("");
   const [formMode, setFormMode] = useState<"create" | "join">("create");
+  const [maxPlayers, setMaxPlayers] = useState<string>("8");
   const { 
     selectedGameMode,
     setSelectedGameMode,
@@ -36,7 +37,7 @@ const GameRoomCreation = ({ onCreateRoom, onJoinRoom, onCancel }: GameRoomCreati
         toast.error("Veuillez saisir un nom de salle");
         return;
       }
-      onCreateRoom(roomName);
+      onCreateRoom(roomName, parseInt(maxPlayers));
     } else {
       if (!joinCode.trim()) {
         toast.error("Veuillez saisir un code de salle");
@@ -133,7 +134,7 @@ const GameRoomCreation = ({ onCreateRoom, onJoinRoom, onCancel }: GameRoomCreati
 
                   <div className="space-y-2">
                     <Label className="text-white">Nombre de joueurs max</Label>
-                    <Select defaultValue="8">
+                    <Select value={maxPlayers} onValueChange={setMaxPlayers}>
                       <SelectTrigger className="bg-white/30 border-white/20 text-white">
                         <SelectValue placeholder="Nombre de joueurs max" />
                       </SelectTrigger>

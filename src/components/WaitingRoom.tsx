@@ -7,6 +7,9 @@ import { Users, Copy, PlayCircle, ArrowLeft } from "lucide-react";
 import { useGameStore } from "@/store/gameStore";
 import { GameRoom, Player } from "@/types/game";
 import { Badge } from "./ui/badge";
+import { startGameSession } from "@/services/gameService";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 interface WaitingRoomProps {
   room: GameRoom;
@@ -21,7 +24,99 @@ const WaitingRoom = ({
   onStartGame, 
   onLeaveRoom 
 }: WaitingRoomProps) => {
+  const { user } = useAuth();
   const [copiedCode, setCopiedCode] = useState(false);
+  const [players, setPlayers] = useState<Player[]>(room.players || []);
+  const { setCurrentRoom } = useGameStore();
+  
+  useEffect(() => {
+    if (!room || !user) return;
+    
+    // Subscribe to player changes in this room
+    const playersSubscription = supabase
+      .channel(`room-${room.id}-players`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'game_players',
+          filter: `room_id=eq.${room.id}`
+        },
+        () => {
+          fetchPlayers();
+        }
+      )
+      .subscribe();
+    
+    // Subscribe to room changes
+    const roomSubscription = supabase
+      .channel(`room-${room.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'game_rooms',
+          filter: `id=eq.${room.id}`
+        },
+        async (payload) => {
+          // If room status changed to playing, start the game
+          if (payload.new.status === 'playing' && room.status === 'waiting') {
+            onStartGame();
+          }
+          
+          // Update current room with new data
+          const updatedRoom = { ...room, ...payload.new };
+          setCurrentRoom(updatedRoom);
+        }
+      )
+      .subscribe();
+    
+    // Initial fetch of players
+    fetchPlayers();
+    
+    return () => {
+      supabase.removeChannel(playersSubscription);
+      supabase.removeChannel(roomSubscription);
+    };
+  }, [room, user]);
+  
+  const fetchPlayers = async () => {
+    if (!room) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('game_players')
+        .select(`
+          user_id,
+          profiles:user_id (
+            id,
+            username,
+            avatar_url
+          )
+        `)
+        .eq('room_id', room.id);
+      
+      if (error) throw error;
+      
+      const mappedPlayers: Player[] = data.map(p => ({
+        id: p.profiles.id,
+        username: p.profiles.username,
+        avatar_url: p.profiles.avatar_url
+      }));
+      
+      setPlayers(mappedPlayers);
+      
+      // Update current room with new players
+      setCurrentRoom({
+        ...room,
+        players: mappedPlayers
+      });
+    } catch (error) {
+      console.error("Error fetching players:", error);
+    }
+  };
   
   const copyJoinCode = () => {
     navigator.clipboard.writeText(room.join_code);
@@ -31,25 +126,15 @@ const WaitingRoom = ({
     setTimeout(() => setCopiedCode(false), 2000);
   };
   
-  // Simuler l'arrivée de nouveaux joueurs pour la démo
-  const [players, setPlayers] = useState<Player[]>(room.players);
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (players.length < room.max_players && Math.random() > 0.7) {
-        const newPlayer: Player = {
-          id: `player-${players.length + 1}`,
-          username: `Joueur ${players.length + 1}`,
-          avatar_url: "/placeholder.svg"
-        };
-        
-        setPlayers(prev => [...prev, newPlayer]);
-        toast.info(`${newPlayer.username} a rejoint la partie!`);
-      }
-    }, 5000);
+  const handleStartGame = async () => {
+    if (!isOwner || !user) return;
     
-    return () => clearInterval(interval);
-  }, [players, room.max_players]);
+    const success = await startGameSession(room.id, user.id);
+    if (success) {
+      toast.success("La partie commence !");
+      onStartGame();
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -153,7 +238,7 @@ const WaitingRoom = ({
         <div className="flex justify-center pt-4">
           <Button 
             size="lg"
-            onClick={onStartGame}
+            onClick={handleStartGame}
             className="bg-promptfighter-cyan hover:bg-promptfighter-cyan/90 text-promptfighter-navy font-bold px-8 py-6 text-lg"
             disabled={players.length < 2}
           >
