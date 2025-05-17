@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,12 +30,14 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
     isCreatingRoom,
     setIsCreatingRoom,
     currentRoom,
-    setCurrentRoom
+    setCurrentRoom,
+    setCurrentTargetImage,
+    targetImage,
+    setTargetImage
   } = useGameStore();
   
   const [showGame, setShowGame] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<GameRoom[]>([]);
-  const [targetImage, setTargetImage] = useState<TargetImage | null>(null);
 
   const fetchAvailableRooms = useCallback(async () => {
     if (!user) return;
@@ -160,6 +161,9 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
     console.log("handleStartGame called");
     try {
       if (selectedGameMode === 'solo') {
+        // Reset current target image before fetching a new one
+        setCurrentTargetImage(null);
+        
         // For solo mode, get a random target image
         const randomTargetImage = await getRandomTargetImage(selectedDifficulty);
         console.log("Fetched target image for solo mode:", randomTargetImage); // Debug log
@@ -171,6 +175,9 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
         
         setTargetImage(randomTargetImage);
       } else if (currentRoom) {
+        // Reset current target image before fetching a new one
+        setCurrentTargetImage(null);
+        
         // For multiplayer, fetch the target image based on the room's target_image_url
         if (currentRoom.target_image_url) {
           console.log("Fetching target image based on URL:", currentRoom.target_image_url);
@@ -250,10 +257,37 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
   // Render the game simulator if a game is in progress
   if (showGame) {
     return <GameSimulator 
-      onExit={() => setShowGame(false)} 
-      gameMode={selectedGameMode} 
-      difficulty={selectedDifficulty} 
-      targetImage={targetImage?.url || ""} 
+      room={{
+        id: 'solo-game',
+        name: 'Solo Game',
+        created_at: new Date().toISOString(),
+        owner_id: user?.id || '',
+        game_mode: selectedGameMode,
+        difficulty: selectedDifficulty,
+        status: 'playing',
+        target_image_url: targetImage?.url || '',
+        join_code: '',
+        max_players: 1,
+        players: [{
+          id: user?.id || '',
+          username: user?.username || 'Player',
+          avatar_url: user?.avatar_url
+        }]
+      }}
+      currentPlayer={{
+        id: user?.id || '',
+        username: user?.username || 'Player',
+        avatar_url: user?.avatar_url
+      }}
+      onGamePhaseChange={(phase) => {
+        if (phase === 'waiting') {
+          setShowGame(false);
+        }
+      }}
+      onGameEnd={(results) => {
+        console.log('Game ended:', results);
+        setShowGame(false);
+      }}
     />;
   }
 

@@ -1,4 +1,3 @@
-
 export type Difficulty = "easy" | "medium" | "hard";
 export type GameMode = "solo" | "duel" | "team";
 export type GamePhase = "waiting" | "playing" | "voting" | "results";
@@ -43,3 +42,8 @@ export interface GameSubmission {
   accuracy_score: number;
   votes_received: number;
 }
+
+export type Point = {
+  x: number;
+  y: number;
+};

@@ -1,6 +1,5 @@
-
 import { create } from 'zustand';
-import { Difficulty, GameMode, GamePhase, GameRoom, Player } from '@/types/game';
+import { Difficulty, GameMode, GamePhase, GameRoom, Player, TargetImage } from '@/types/game';
 
 interface GameState {
   // Utilisateur courant
@@ -22,6 +21,12 @@ interface GameState {
   setIsCreatingRoom: (isCreating: boolean) => void;
   joinCode: string;
   setJoinCode: (code: string) => void;
+
+  // Target image management
+  currentTargetImage: TargetImage | null;
+  setCurrentTargetImage: (image: TargetImage | null) => void;
+  targetImage: TargetImage | null;
+  setTargetImage: (image: TargetImage | null) => void;
   
   // Réinitialiser le store
   resetStore: () => void;
@@ -47,6 +52,12 @@ export const useGameStore = create<GameState>((set) => ({
   setIsCreatingRoom: (isCreating) => set({ isCreatingRoom: isCreating }),
   joinCode: "",
   setJoinCode: (code) => set({ joinCode: code }),
+
+  // Target image management
+  currentTargetImage: null,
+  setCurrentTargetImage: (image) => set({ currentTargetImage: image }),
+  targetImage: null,
+  setTargetImage: (image) => set({ targetImage: image }),
   
   // Réinitialiser le store
   resetStore: () => set({
@@ -55,5 +66,7 @@ export const useGameStore = create<GameState>((set) => ({
     selectedGameMode: "solo",
     isCreatingRoom: false,
     joinCode: "",
+    currentTargetImage: null,
+    targetImage: null,
   }),
 }));
