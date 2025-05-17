@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { AuthUser } from "@/lib/auth";
 import { GameRoom, Player, GameMode, Difficulty } from "@/types/game";
@@ -16,7 +15,7 @@ export const getRandomTargetImage = async (difficulty: Difficulty): Promise<stri
       .from('target_images')
       .select('url')
       .eq('difficulty', difficulty)
-      .order('random()')
+      .order('RANDOM()')
       .limit(1)
       .single();
     
@@ -68,13 +67,15 @@ export const createGameRoom = async (
     
     if (playerError) throw playerError;
     
+    const player = {  // Create a player object from the data
+      id: data.id,
+      username: data.username,
+      avatar_url: data.avatar_url
+    };
+    
     const room: GameRoom = {
       ...data,
-      players: [{
-        id: owner.id,
-        username: owner.username,
-        avatar_url: owner.avatar_url
-      }]
+      players: [player]
     };
     
     return room;
@@ -142,13 +143,11 @@ export const joinGameRoom = async (
       .eq('room_id', roomData.id);
     
     if (playersError) throw playersError;
-    
     const mappedPlayers: Player[] = players.map(p => ({
-      id: p.profiles.id,
-      username: p.profiles.username,
-      avatar_url: p.profiles.avatar_url
+      id: p.profiles[0].id,
+      username: p.profiles[0].username,
+      avatar_url: p.profiles[0].avatar_url
     }));
-    
     const room: GameRoom = {
       ...roomData,
       players: mappedPlayers

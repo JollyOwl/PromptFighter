@@ -125,8 +125,18 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white">Image modèle</h2>
             <Card className="overflow-hidden bg-white/10 border-white/10">
-              <div className="aspect-square flex items-center justify-center bg-gradient-to-br from-promptfighter-navy to-promptfighter-pink/30">
-                <img src={targetImageUrl} alt="Target" className="object-contain max-h-full" />
+              <div className="aspect-square bg-white/5 rounded-lg overflow-hidden">
+                {targetImage ? (
+                  <img 
+                    src={targetImage} 
+                    alt="Target" 
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-white/50">
+                    No target image available
+                  </div>
+                )}
               </div>
             </Card>
             
@@ -230,8 +240,18 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
             <Card className="bg-white/10 border-white/10">
               <CardContent className="p-4">
                 <h3 className="text-lg font-bold text-white mb-3">Image modèle</h3>
-                <div className="aspect-square flex items-center justify-center bg-gradient-to-br from-promptfighter-navy to-promptfighter-pink/30">
-                  <img src={targetImageUrl} alt="Target" className="object-contain max-h-full" />
+                <div className="aspect-square bg-white/5 rounded-lg overflow-hidden">
+                  {targetImage ? (
+                    <img 
+                      src={targetImage} 
+                      alt="Target" 
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-white/50">
+                      No target image available
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -320,8 +340,18 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div>
                   <h4 className="text-lg font-bold text-white mb-2">Image modèle</h4>
-                  <div className="aspect-square bg-white/5 rounded-lg flex items-center justify-center">
-                    <img src={targetImageUrl} alt="Target" className="object-contain max-h-full" />
+                  <div className="aspect-square bg-white/5 rounded-lg overflow-hidden">
+                    {targetImage ? (
+                      <img 
+                        src={targetImage} 
+                        alt="Target" 
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-white/50">
+                        No target image available
+                      </div>
+                    )}
                   </div>
                 </div>
                 

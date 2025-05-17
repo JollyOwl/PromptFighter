@@ -34,7 +34,7 @@ CREATE TABLE game_rooms (
   game_mode TEXT NOT NULL CHECK (game_mode IN ('solo', 'duel', 'team')),
   difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
   status TEXT NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'voting', 'results', 'closed')),
-  target_image_url TEXT,
+  target_image_id UUID REFERENCES target_images(id),
   join_code TEXT NOT NULL UNIQUE,
   max_players INT NOT NULL DEFAULT 8
 );
@@ -137,6 +137,24 @@ CREATE TABLE player_scores (
   total_votes_received INT DEFAULT 0,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Table pour les images cibles
+CREATE TABLE target_images (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  url TEXT NOT NULL,
+  difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
+  category TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Activer RLS pour target_images
+ALTER TABLE target_images ENABLE ROW LEVEL SECURITY;
+
+-- Politiques pour target_images
+CREATE POLICY "Les images cibles sont visibles par tous les utilisateurs authentifiés"
+  ON target_images FOR SELECT
+  USING (auth.role() = 'authenticated');
 
 -- Activer RLS pour player_scores
 ALTER TABLE player_scores ENABLE ROW LEVEL SECURITY;

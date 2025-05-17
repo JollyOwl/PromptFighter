@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +13,7 @@ import { toast } from "sonner";
 import { useGameStore } from "@/store/gameStore";
 import { GameRoom, Player } from "@/types/game";
 import { useAuth } from "@/hooks/useAuth";
-import { createGameRoom, joinGameRoom, leaveGameRoom } from "@/services/gameService";
+import { createGameRoom, joinGameRoom, leaveGameRoom, getRandomTargetImage } from "@/services/gameService";
 import { supabase } from "@/lib/supabase";
 
 interface GameLobbyProps {
@@ -36,35 +35,9 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
   
   const [showGame, setShowGame] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<GameRoom[]>([]);
+  const [targetImage, setTargetImage] = useState<string>("");
 
-  useEffect(() => {
-    // Fetch available rooms when component mounts
-    if (user) {
-      fetchAvailableRooms();
-      
-      // Subscribe to room changes
-      const roomsSubscription = supabase
-        .channel('public:game_rooms')
-        .on(
-          'postgres_changes', 
-          { 
-            event: '*', 
-            schema: 'public',
-            table: 'game_rooms'
-          }, 
-          () => {
-            fetchAvailableRooms();
-          }
-        )
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(roomsSubscription);
-      };
-    }
-  }, [user]);
-
-  const fetchAvailableRooms = async () => {
+  const fetchAvailableRooms = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -95,6 +68,8 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
         name: room.name,
         created_at: room.created_at,
         owner_id: room.owner_id,
+        target_image_id: null, // Add missing required field
+        target_image: null, // Add missing required field
         game_mode: room.game_mode,
         difficulty: room.difficulty,
         status: room.status,
@@ -109,7 +84,32 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
     } catch (error) {
       console.error("Error fetching available rooms:", error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchAvailableRooms();
+      
+      const roomsSubscription = supabase
+        .channel('public:game_rooms')
+        .on(
+          'postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public',
+            table: 'game_rooms'
+          }, 
+          () => {
+            fetchAvailableRooms();
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(roomsSubscription);
+      };
+    }
+  }, [user, fetchAvailableRooms]);
 
   const handleCreateRoom = async (roomName: string, maxPlayers: number) => {
     if (!user) {
@@ -158,7 +158,30 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
   };
 
   const handleStartGame = async () => {
-    setShowGame(true);
+     console.log("handleStartGame called");
+    try {
+      let imageUrl;
+      if (selectedGameMode === 'solo') {
+        // For solo mode, get a random target image
+        imageUrl = await getRandomTargetImage(selectedDifficulty);
+        console.log("Fetched target image:", imageUrl); // Debug log
+      } else {
+        // For multiplayer, use the room's target image
+        imageUrl = currentRoom?.target_image?.url;
+        console.log("Room target image:", imageUrl); // Debug log
+      }
+
+      if (!imageUrl) {
+        toast.error("Failed to load target image");
+        return;
+      }
+
+      setTargetImage(imageUrl);
+      setShowGame(true);
+    } catch (error) {
+      console.error("Error starting game:", error);
+      toast.error("Failed to start game");
+    }
   };
 
   const handleLeaveRoom = async () => {
@@ -173,7 +196,12 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
 
   // Render the game simulator if a game is in progress
   if (showGame) {
-    return <GameSimulator onExit={() => setShowGame(false)} gameMode={selectedGameMode} difficulty={selectedDifficulty} targetImage={currentRoom?.target_image_url} />;
+    return <GameSimulator 
+      onExit={() => setShowGame(false)} 
+      gameMode={selectedGameMode} 
+      difficulty={selectedDifficulty} 
+      targetImage={targetImage} 
+    />;
   }
 
   // Render waiting room if the user is in a room
@@ -220,7 +248,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
             
             <RadioGroup 
               value={selectedGameMode} 
-              onValueChange={(value) => setSelectedGameMode(value as any)}
+              onValueChange={(value) => setSelectedGameMode(value as "solo" | "duel" | "team")}
               className="space-y-3"
             >
               <div className="flex items-start space-x-2 p-3 rounded-md bg-white/10">
@@ -266,7 +294,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="difficulty" className="text-white">Difficulté</Label>
-                <Select value={selectedDifficulty} onValueChange={(value) => setSelectedDifficulty(value as any)}>
+                <Select value={selectedDifficulty} onValueChange={(value) => setSelectedDifficulty(value as "easy" | "medium" | "hard")}>
                   <SelectTrigger id="difficulty" className="bg-white/30 border-white/20 text-white">
                     <SelectValue placeholder="Sélectionnez la difficulté" />
                   </SelectTrigger>
@@ -291,7 +319,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
                               <span className="text-sm text-white">{room.name}</span>
                             </div>
                             <Badge className="bg-promptfighter-pink text-white">
-                              {room.playerCount || 0}/{room.max_players}
+                              {room.players?.length || 0}/{room.max_players}
                             </Badge>
                           </div>
                           <div className="flex items-center justify-between">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -79,11 +79,10 @@ const WaitingRoom = ({
       supabase.removeChannel(playersSubscription);
       supabase.removeChannel(roomSubscription);
     };
-  }, [room, user]);
+  }, [onStartGame, room, setCurrentRoom, user]);
   
-  const fetchPlayers = async () => {
+  const fetchPlayers = useCallback(async () => {
     if (!room) return;
-    
     try {
       const { data, error } = await supabase
         .from('game_players')
@@ -98,13 +97,11 @@ const WaitingRoom = ({
         .eq('room_id', room.id);
       
       if (error) throw error;
-      
       const mappedPlayers: Player[] = data.map(p => ({
-        id: p.profiles.id,
-        username: p.profiles.username,
-        avatar_url: p.profiles.avatar_url
+        id: p.profiles[0].id,
+        username: p.profiles[0].username,
+        avatar_url: p.profiles[0].avatar_url
       }));
-      
       setPlayers(mappedPlayers);
       
       // Update current room with new players
@@ -115,7 +112,7 @@ const WaitingRoom = ({
     } catch (error) {
       console.error("Error fetching players:", error);
     }
-  };
+  }, [room, setCurrentRoom]);
   
   const copyJoinCode = () => {
     navigator.clipboard.writeText(room.join_code);
@@ -197,24 +194,17 @@ const WaitingRoom = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {players.map((player) => (
               <div 
-                key={player.id} 
+                key={player.id}
                 className="bg-white/10 p-3 rounded-lg flex flex-col items-center gap-2"
               >
-                <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-promptfighter-navy to-promptfighter-pink/30">
+                <div className="w-16 h-16 rounded-full bg-white/20 overflow-hidden">
                   <img 
                     src={player.avatar_url || "/placeholder.svg"}
                     alt={player.username}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="text-center">
-                  <p className="text-white font-medium">{player.username}</p>
-                  {player.id === room.owner_id && (
-                    <Badge variant="outline" className="border-promptfighter-cyan text-promptfighter-cyan text-xs">
-                      Hôte
-                    </Badge>
-                  )}
-                </div>
+                <p className="text-white font-medium">{player.username}</p>
               </div>
             ))}
             
