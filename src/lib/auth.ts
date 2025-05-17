@@ -1,12 +1,13 @@
-
 import { supabase } from './supabase';
-import { toast } from "sonner";
+import { User, UserResponse } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  username: string;
-  avatar_url?: string;
+export interface AuthUser extends User {
+  user_metadata?: {
+    username?: string;
+    avatar_url?: string;
+    [key: string]: any;
+  };
 }
 
 export interface SignUpCredentials {

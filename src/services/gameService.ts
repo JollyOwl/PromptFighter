@@ -73,10 +73,14 @@ export const createGameRoom = async (
     
     if (playerError) throw playerError;
     
+    // Get user metadata safely
+    const username = owner.user_metadata?.username || 'Player';
+    const avatarUrl = owner.user_metadata?.avatar_url;
+    
     const player: Player = {
       id: owner.id,
-      username: owner.user_metadata?.username || 'Player',
-      avatar_url: owner.user_metadata?.avatar_url
+      username: username,
+      avatar_url: avatarUrl
     };
     
     const room: GameRoom = {
@@ -174,10 +178,10 @@ export const joinGameRoom = async (
       }
     }
     
-    // Map player profiles correctly
+    // Map player profiles correctly - make sure we're handling the data structure properly
     const mappedPlayers: Player[] = players.map(p => ({
       id: p.profiles.id,
-      username: p.profiles.username,
+      username: p.profiles.username || 'Player',
       avatar_url: p.profiles.avatar_url
     }));
     

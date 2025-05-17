@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,8 +37,8 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
   
   // Debug the target image
   useEffect(() => {
-    console.log("Target image URL:", targetImage);
-  }, [targetImage]);
+    console.log("Target image URL:", targetImageUrl);
+  }, [targetImage, targetImageUrl]);
 
   // Compter à rebours
   useEffect(() => {

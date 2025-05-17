@@ -102,7 +102,7 @@ const WaitingRoom = ({
       // Map the nested profile data to Player objects
       const mappedPlayers: Player[] = data.map(p => ({
         id: p.profiles.id,
-        username: p.profiles.username,
+        username: p.profiles.username || 'Player',
         avatar_url: p.profiles.avatar_url
       }));
       
