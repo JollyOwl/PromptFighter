@@ -151,7 +151,7 @@ const WaitingRoom = ({
       <Button 
         variant="ghost" 
         onClick={onLeaveRoom}
-        className="mb-4 text-white hover:bg-white/10"
+        className="mb-4 text-promptfighter-neon hover:bg-promptfighter-neon/20"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Quitter la salle
@@ -159,7 +159,9 @@ const WaitingRoom = ({
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white">{room.name}</h2>
+          <h2 className="text-2xl font-bold text-white retro-text">
+            {room.name}
+          </h2>
           <p className="text-white/70">
             Mode: {room.game_mode === "duel" ? "Duel" : "Équipe"} | 
             Difficulté: {
@@ -172,35 +174,35 @@ const WaitingRoom = ({
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <span className="text-white font-medium">Code de la salle:</span>
-            <Badge variant="secondary" className="bg-white/20 text-white text-lg font-mono">
+            <Badge variant="secondary" className="bg-promptfighter-neon/20 text-promptfighter-neon text-lg font-mono border border-promptfighter-neon/50">
               {room.join_code}
             </Badge>
             <Button 
               size="sm" 
               variant="ghost" 
               onClick={copyJoinCode}
-              className="h-8 px-2 text-white hover:bg-white/20"
+              className="h-8 px-2 text-promptfighter-neon hover:bg-promptfighter-neon/20"
             >
               <Copy className="h-4 w-4" />
             </Button>
           </div>
           
           {copiedCode && (
-            <p className="text-xs text-promptfighter-cyan animate-pulse">
+            <p className="text-xs text-promptfighter-neon animate-pulse">
               Code copié !
             </p>
           )}
         </div>
       </div>
       
-      <Card className="bg-white/20 backdrop-blur-sm border-white/20">
+      <Card className="bg-black/30 backdrop-blur-sm border-promptfighter-neon/30 neon-border">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-white flex items-center">
-              <Users className="mr-2 h-5 w-5" />
+            <h3 className="text-xl font-bold text-white flex items-center retro-text">
+              <Users className="mr-2 h-5 w-5 text-promptfighter-neon" />
               Joueurs
             </h3>
-            <Badge className="bg-promptfighter-pink text-white">
+            <Badge className="bg-promptfighter-neon text-promptfighter-black font-bold">
               {players.length}/{room.max_players}
             </Badge>
           </div>
@@ -209,25 +211,25 @@ const WaitingRoom = ({
             {players.map((player) => (
               <div 
                 key={player.id}
-                className="bg-white/10 p-3 rounded-lg flex flex-col items-center gap-2"
+                className="bg-black/40 p-3 rounded-lg flex flex-col items-center gap-2 border border-promptfighter-neon/30 hover:border-promptfighter-neon/60 transition-all"
               >
-                <div className="w-16 h-16 rounded-full bg-white/20 overflow-hidden">
+                <div className="w-16 h-16 rounded-full bg-black/50 overflow-hidden border-2 border-promptfighter-neon/50">
                   <img 
                     src={player.avatar_url || "/placeholder.svg"}
                     alt={player.username}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <p className="text-white font-medium">{player.username}</p>
+                <p className="text-white font-medium text-center truncate w-full">{player.username}</p>
               </div>
             ))}
             
             {Array(room.max_players - players.length).fill(0).map((_, index) => (
               <div 
                 key={`empty-${index}`}
-                className="bg-white/5 p-3 rounded-lg flex flex-col items-center gap-2 border border-dashed border-white/20"
+                className="bg-black/20 p-3 rounded-lg flex flex-col items-center gap-2 border border-dashed border-white/20"
               >
-                <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-black/30 flex items-center justify-center">
                   <Users className="h-8 w-8 text-white/30" />
                 </div>
                 <p className="text-white/50 text-sm">En attente...</p>
@@ -242,8 +244,8 @@ const WaitingRoom = ({
           <Button 
             size="lg"
             onClick={handleStartGame}
-            className="bg-promptfighter-cyan hover:bg-promptfighter-cyan/90 text-promptfighter-navy font-bold px-8 py-6 text-lg"
             disabled={players.length < 2}
+            className="bg-promptfighter-neon hover:bg-promptfighter-neon/90 text-promptfighter-black font-bold px-8 py-6 text-lg border-2 border-transparent hover:border-promptfighter-neon hover:text-promptfighter-neon hover:bg-transparent transition-all retro-text"
           >
             <PlayCircle className="mr-2 h-6 w-6" />
             Lancer la partie
@@ -252,8 +254,8 @@ const WaitingRoom = ({
       )}
       
       {!isOwner && (
-        <div className="text-center p-4 bg-white/10 rounded-lg">
-          <p className="text-white">En attente du lancement de la partie par l'hôte...</p>
+        <div className="text-center p-4 bg-black/30 rounded-lg border border-promptfighter-neon/20">
+          <p className="text-promptfighter-neon">En attente du lancement de la partie par l'hôte...</p>
         </div>
       )}
     </div>

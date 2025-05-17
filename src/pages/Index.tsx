@@ -65,19 +65,22 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-game">
-        <div className="text-white text-2xl">Chargement...</div>
+      <div className="min-h-screen flex items-center justify-center bg-promptfighter-black grid-bg">
+        <div className="text-promptfighter-neon text-2xl retro-text animate-pulse">Chargement...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-game">
+    <div className="min-h-screen flex flex-col items-center justify-center">
+      {/* Scanlines effect for retro look */}
+      <div className="scanline"></div>
+      
       <Navbar />
-      <div className="flex flex-col items-center justify-center z-10 p-4 w-full max-w-5xl">
-
+      
+      <div className="flex flex-col items-center justify-center z-10 p-4 w-full max-w-5xl mt-16">
         {/* Main content - auth or lobby */}
-        <Card className="w-full max-w-4xl bg-white/20 backdrop-blur-lg border-white/20 shadow-xl">
+        <Card className="w-full max-w-4xl bg-black/30 backdrop-blur-lg border-promptfighter-neon/20 shadow-xl neon-border">
           <CardContent className="p-6">
             {!user ? (
               <AuthForm onLogin={() => {}} />
@@ -90,7 +93,7 @@ const Index = () => {
         </Card>
         
         {/* Footer */}
-        <div className="mt-8 text-white/60 text-sm text-center">
+        <div className="mt-8 text-promptfighter-neon/60 text-sm text-center">
           © {new Date().getFullYear()} Prompt Fighter - Un projet interne
         </div>
       </div>

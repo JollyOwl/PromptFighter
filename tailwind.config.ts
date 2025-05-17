@@ -63,12 +63,14 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-        // Palette de couleurs de Prompt Fighter
+        // Palette de couleurs de Prompt Fighter with new theme colors
         promptfighter: {
           pink: '#FF87A1',
           cyan: '#3CE7F0',
           lavender: '#EFD8FF',
           navy: '#231955',
+          black: '#1c1c1a',
+          neon: '#a5fd32',
         }
 			},
 			borderRadius: {
@@ -94,18 +96,29 @@ export default {
 					}
 				},
         'pulse-glow': {
-          '0%, 100%': { boxShadow: '0 0 20px 5px rgba(255, 135, 161, 0.4)' },
-          '50%': { boxShadow: '0 0 30px 10px rgba(60, 231, 240, 0.6)' },
+          '0%, 100%': { boxShadow: '0 0 20px 5px rgba(165, 253, 50, 0.4)' },
+          '50%': { boxShadow: '0 0 30px 10px rgba(165, 253, 50, 0.6)' },
+        },
+        'text-flicker': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.8' },
+        },
+        'neon-pulse': {
+          '0%, 100%': { textShadow: '0 0 5px #a5fd32, 0 0 10px #a5fd32' },
+          '50%': { textShadow: '0 0 20px #a5fd32, 0 0 30px #a5fd32' },
         }
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
         'pulse-glow': 'pulse-glow 3s infinite',
+        'text-flicker': 'text-flicker 3s infinite',
+        'neon-pulse': 'neon-pulse 2s infinite',
 			},
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-game': 'linear-gradient(to right bottom, #231955, #493990, #7b58ca, #b575ff, #efd8ff)',
+        'gradient-game': 'linear-gradient(to right bottom, #1c1c1a, #252523, #303030, #424242, #a5fd32)',
+        'grid-pattern': 'linear-gradient(to right, rgba(165, 253, 50, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(165, 253, 50, 0.1) 1px, transparent 1px)',
       }
 		}
 	},

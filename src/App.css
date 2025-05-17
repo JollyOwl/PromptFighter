@@ -1,3 +1,4 @@
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -12,10 +13,10 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em #a5fd32aa);
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 2em #a5fd32aa);
 }
 
 @keyframes logo-spin {
@@ -38,5 +39,50 @@
 }
 
 .read-the-docs {
-  color: #888;
+  color: #a5fd32;
+}
+
+.retro-container {
+  background-color: #1c1c1a;
+  background-image: 
+    linear-gradient(to right, rgba(165, 253, 50, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(165, 253, 50, 0.05) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.retro-glow {
+  box-shadow: 0 0 10px rgba(165, 253, 50, 0.7);
+}
+
+.retro-button {
+  background-color: #a5fd32;
+  color: #1c1c1a;
+  font-weight: bold;
+  border: 2px solid #a5fd32;
+  padding: 0.5em 1em;
+  transition: all 0.3s ease;
+}
+
+.retro-button:hover {
+  background-color: #1c1c1a;
+  color: #a5fd32;
+  box-shadow: 0 0 15px rgba(165, 253, 50, 0.8);
+}
+
+.scanline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 999;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.02) 50%,
+    rgba(0, 0, 0, 0)
+  );
+  background-size: 100% 4px;
 }
