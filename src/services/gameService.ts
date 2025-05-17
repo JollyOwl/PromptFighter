@@ -1,6 +1,7 @@
+
 import { supabase } from "@/lib/supabase";
 import { AuthUser } from "@/lib/auth";
-import { GameRoom, Player, GameMode, Difficulty } from "@/types/game";
+import { GameRoom, Player, GameMode, Difficulty, TargetImage } from "@/types/game";
 import { toast } from "sonner";
 
 // Helper function to generate random code
@@ -9,22 +10,22 @@ export const generateRoomCode = (): string => {
 };
 
 // Get random target image from the database
-export const getRandomTargetImage = async (difficulty: Difficulty): Promise<string> => {
+export const getRandomTargetImage = async (difficulty: Difficulty): Promise<TargetImage | null> => {
   try {
     const { data, error } = await supabase
       .from('target_images')
-      .select('url')
+      .select('*')
       .eq('difficulty', difficulty)
       .order('RANDOM()')
       .limit(1)
       .single();
     
     if (error) throw error;
-    return data.url;
+    return data as TargetImage;
   } catch (error) {
     console.error('Error fetching target image:', error);
-    // Fallback to placeholder
-    return '/placeholder.svg';
+    toast.error('Failed to fetch target image');
+    return null;
   }
 };
 
@@ -38,7 +39,12 @@ export const createGameRoom = async (
 ): Promise<GameRoom | null> => {
   try {
     const joinCode = generateRoomCode();
-    const targetImageUrl = await getRandomTargetImage(difficulty);
+    const targetImage = await getRandomTargetImage(difficulty);
+    
+    if (!targetImage) {
+      toast.error('Failed to fetch a target image');
+      return null;
+    }
     
     // Insert room into database
     const { data, error } = await supabase
@@ -49,7 +55,7 @@ export const createGameRoom = async (
         difficulty,
         owner_id: owner.id,
         join_code: joinCode,
-        target_image_url: targetImageUrl,
+        target_image_url: targetImage.url,
         max_players: maxPlayers
       })
       .select()
@@ -67,14 +73,15 @@ export const createGameRoom = async (
     
     if (playerError) throw playerError;
     
-    const player = {  // Create a player object from the data
-      id: data.id,
-      username: data.username,
-      avatar_url: data.avatar_url
+    const player: Player = {
+      id: owner.id,
+      username: owner.user_metadata?.username || 'Player',
+      avatar_url: owner.user_metadata?.avatar_url
     };
     
     const room: GameRoom = {
       ...data,
+      target_image: targetImage,
       players: [player]
     };
     
@@ -143,13 +150,39 @@ export const joinGameRoom = async (
       .eq('room_id', roomData.id);
     
     if (playersError) throw playersError;
+    
+    // Get target image if available
+    let targetImage: TargetImage | null = null;
+    if (roomData.target_image_url) {
+      // Try to find the target image in the database
+      const { data: imageData } = await supabase
+        .from('target_images')
+        .select('*')
+        .eq('url', roomData.target_image_url)
+        .maybeSingle();
+      
+      if (imageData) {
+        targetImage = imageData as TargetImage;
+      } else {
+        // Create a placeholder target image if not found
+        targetImage = {
+          id: 'placeholder',
+          url: roomData.target_image_url,
+          difficulty: roomData.difficulty as Difficulty,
+          name: 'Target Image'
+        };
+      }
+    }
+    
     const mappedPlayers: Player[] = players.map(p => ({
-      id: p.profiles[0].id,
-      username: p.profiles[0].username,
-      avatar_url: p.profiles[0].avatar_url
+      id: p.profiles.id,
+      username: p.profiles.username,
+      avatar_url: p.profiles.avatar_url
     }));
+    
     const room: GameRoom = {
       ...roomData,
+      target_image: targetImage,
       players: mappedPlayers
     };
     

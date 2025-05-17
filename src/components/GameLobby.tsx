@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import GameRoomCreation from "./GameRoomCreation";
 import WaitingRoom from "./WaitingRoom";
 import { toast } from "sonner";
 import { useGameStore } from "@/store/gameStore";
-import { GameRoom, Player } from "@/types/game";
+import { GameRoom, Player, TargetImage } from "@/types/game";
 import { useAuth } from "@/hooks/useAuth";
 import { createGameRoom, joinGameRoom, leaveGameRoom, getRandomTargetImage } from "@/services/gameService";
 import { supabase } from "@/lib/supabase";
@@ -35,7 +36,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
   
   const [showGame, setShowGame] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<GameRoom[]>([]);
-  const [targetImage, setTargetImage] = useState<string>("");
+  const [targetImage, setTargetImage] = useState<TargetImage | null>(null);
 
   const fetchAvailableRooms = useCallback(async () => {
     if (!user) return;
@@ -68,8 +69,6 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
         name: room.name,
         created_at: room.created_at,
         owner_id: room.owner_id,
-        target_image_id: null, // Add missing required field
-        target_image: null, // Add missing required field
         game_mode: room.game_mode,
         difficulty: room.difficulty,
         status: room.status,
@@ -158,25 +157,37 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
   };
 
   const handleStartGame = async () => {
-     console.log("handleStartGame called");
+    console.log("handleStartGame called");
     try {
-      let imageUrl;
       if (selectedGameMode === 'solo') {
         // For solo mode, get a random target image
-        imageUrl = await getRandomTargetImage(selectedDifficulty);
-        console.log("Fetched target image:", imageUrl); // Debug log
-      } else {
+        const randomTargetImage = await getRandomTargetImage(selectedDifficulty);
+        console.log("Fetched target image:", randomTargetImage); // Debug log
+        
+        if (!randomTargetImage) {
+          toast.error("Failed to load target image");
+          return;
+        }
+        
+        setTargetImage(randomTargetImage);
+      } else if (currentRoom?.target_image_url) {
         // For multiplayer, use the room's target image
-        imageUrl = currentRoom?.target_image?.url;
-        console.log("Room target image:", imageUrl); // Debug log
-      }
-
-      if (!imageUrl) {
-        toast.error("Failed to load target image");
+        if (currentRoom.target_image) {
+          setTargetImage(currentRoom.target_image);
+        } else {
+          // If target_image is not available but URL is, create a placeholder object
+          setTargetImage({
+            id: 'placeholder',
+            url: currentRoom.target_image_url,
+            difficulty: currentRoom.difficulty,
+            name: 'Target Image'
+          });
+        }
+      } else {
+        toast.error("No target image available");
         return;
       }
-
-      setTargetImage(imageUrl);
+      
       setShowGame(true);
     } catch (error) {
       console.error("Error starting game:", error);
@@ -200,7 +211,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
       onExit={() => setShowGame(false)} 
       gameMode={selectedGameMode} 
       difficulty={selectedDifficulty} 
-      targetImage={targetImage} 
+      targetImage={targetImage?.url} 
     />;
   }
 

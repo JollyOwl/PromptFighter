@@ -97,11 +97,14 @@ const WaitingRoom = ({
         .eq('room_id', room.id);
       
       if (error) throw error;
+      
+      // Map the nested profile data to Player objects
       const mappedPlayers: Player[] = data.map(p => ({
-        id: p.profiles[0].id,
-        username: p.profiles[0].username,
-        avatar_url: p.profiles[0].avatar_url
+        id: p.profiles.id,
+        username: p.profiles.username,
+        avatar_url: p.profiles.avatar_url
       }));
+      
       setPlayers(mappedPlayers);
       
       // Update current room with new players

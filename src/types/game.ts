@@ -1,3 +1,4 @@
+
 export type Difficulty = "easy" | "medium" | "hard";
 export type GameMode = "solo" | "duel" | "team";
 export type GamePhase = "waiting" | "playing" | "voting" | "results";
@@ -14,6 +15,7 @@ export interface TargetImage {
   url: string;
   difficulty: Difficulty;
   category?: string;
+  name: string;
 }
 
 export interface GameRoom {
@@ -24,11 +26,13 @@ export interface GameRoom {
   game_mode: GameMode;
   difficulty: Difficulty;
   status: GamePhase;
-  target_image_id: string;
-  target_image: TargetImage;
+  target_image_id?: string;
+  target_image?: TargetImage;
+  target_image_url?: string;
   join_code: string;
   max_players: number;
   players: Player[];
+  playerCount?: number;
 }
 
 export interface GameSubmission {
