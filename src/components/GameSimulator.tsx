@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +26,7 @@ const difficultyTimes = {
 const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimulatorProps) => {
   const { user } = useAuth();
   const [gamePhase, setGamePhase] = useState<"playing" | "voting" | "results">("playing");
-  const [timeLeft, setTimeLeft] = useState(difficultyTimes[difficulty as keyof typeof difficultyTimes]);
+  const [timeLeft, setTimeLeft] = useState(difficultyTimes[difficulty as keyof typeof difficultyTimes] || 180);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
@@ -35,6 +36,11 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
   // Use the provided target image or fallback to placeholder
   const targetImageUrl = targetImage || "/placeholder.svg";
   
+  // Debug the target image
+  useEffect(() => {
+    console.log("Target image URL:", targetImage);
+  }, [targetImage]);
+
   // Compter à rebours
   useEffect(() => {
     if (gamePhase !== "playing") return;
@@ -125,12 +131,16 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white">Image modèle</h2>
             <Card className="overflow-hidden bg-white/10 border-white/10">
-              <div className="aspect-square bg-white/5 rounded-lg overflow-hidden">
-                {targetImage ? (
+              <div className="aspect-square bg-white/5 rounded-lg overflow-hidden flex items-center justify-center">
+                {targetImageUrl ? (
                   <img 
-                    src={targetImage} 
+                    src={targetImageUrl} 
                     alt="Target" 
                     className="w-full h-full object-contain"
+                    onError={(e) => {
+                      console.error("Image failed to load:", targetImageUrl);
+                      e.currentTarget.src = "/placeholder.svg";
+                    }}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-white/50">
@@ -240,10 +250,10 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
             <Card className="bg-white/10 border-white/10">
               <CardContent className="p-4">
                 <h3 className="text-lg font-bold text-white mb-3">Image modèle</h3>
-                <div className="aspect-square bg-white/5 rounded-lg overflow-hidden">
-                  {targetImage ? (
+                <div className="aspect-square bg-white/5 rounded-lg overflow-hidden flex items-center justify-center">
+                  {targetImageUrl ? (
                     <img 
-                      src={targetImage} 
+                      src={targetImageUrl} 
                       alt="Target" 
                       className="w-full h-full object-contain"
                     />
@@ -340,10 +350,10 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div>
                   <h4 className="text-lg font-bold text-white mb-2">Image modèle</h4>
-                  <div className="aspect-square bg-white/5 rounded-lg overflow-hidden">
-                    {targetImage ? (
+                  <div className="aspect-square bg-white/5 rounded-lg overflow-hidden flex items-center justify-center">
+                    {targetImageUrl ? (
                       <img 
-                        src={targetImage} 
+                        src={targetImageUrl} 
                         alt="Target" 
                         className="w-full h-full object-contain"
                       />

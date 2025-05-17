@@ -174,6 +174,7 @@ export const joinGameRoom = async (
       }
     }
     
+    // Map player profiles correctly
     const mappedPlayers: Player[] = players.map(p => ({
       id: p.profiles.id,
       username: p.profiles.username,
