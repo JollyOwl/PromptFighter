@@ -110,7 +110,7 @@ const AuthForm = ({
             </div>
           </div>
           
-          <Button type="submit" className="w-full bg-promptfighter-pink hover:bg-promptfighter-pink/80 text-white" disabled={loading}>
+          <Button type="submit" disabled={loading} className="w-full bg-lime-400 hover:bg-lime-300 text-center text-neutral-950">
             {loading ? "Connexion en cours..." : <>
                 <LogIn className="w-4 h-4 mr-2" />
                 Se connecter
