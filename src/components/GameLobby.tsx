@@ -162,7 +162,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
       if (selectedGameMode === 'solo') {
         // For solo mode, get a random target image
         const randomTargetImage = await getRandomTargetImage(selectedDifficulty);
-        console.log("Fetched target image:", randomTargetImage); // Debug log
+        console.log("Fetched target image for solo mode:", randomTargetImage); // Debug log
         
         if (!randomTargetImage) {
           toast.error("Failed to load target image");
@@ -170,24 +170,66 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
         }
         
         setTargetImage(randomTargetImage);
-      } else if (currentRoom?.target_image_url) {
-        // For multiplayer, use the room's target image
-        if (currentRoom.target_image) {
-          setTargetImage(currentRoom.target_image);
+      } else if (currentRoom) {
+        // For multiplayer, fetch the target image based on the room's target_image_url
+        if (currentRoom.target_image_url) {
+          console.log("Fetching target image based on URL:", currentRoom.target_image_url);
+          
+          // Try to find the image in the database first
+          const { data: imageData, error } = await supabase
+            .from('target_images')
+            .select('*')
+            .eq('url', currentRoom.target_image_url)
+            .maybeSingle();
+          
+          if (error) {
+            console.error("Error fetching target image:", error);
+            toast.error("Failed to fetch target image");
+            return;
+          }
+          
+          if (imageData) {
+            console.log("Found image in database:", imageData);
+            setTargetImage(imageData as TargetImage);
+          } else {
+            // If not found, create a placeholder
+            console.log("Creating placeholder for image with URL:", currentRoom.target_image_url);
+            setTargetImage({
+              id: 'placeholder',
+              url: currentRoom.target_image_url,
+              difficulty: currentRoom.difficulty,
+              name: 'Target Image'
+            });
+          }
         } else {
-          // If target_image is not available but URL is, create a placeholder object
-          setTargetImage({
-            id: 'placeholder',
-            url: currentRoom.target_image_url,
-            difficulty: currentRoom.difficulty,
-            name: 'Target Image'
-          });
+          // If no target_image_url, get a random one based on the room's difficulty
+          console.log("No target image URL in room, fetching random image");
+          const randomTargetImage = await getRandomTargetImage(currentRoom.difficulty);
+          
+          if (!randomTargetImage) {
+            toast.error("Failed to load target image");
+            return;
+          }
+          
+          console.log("Fetched random image for room:", randomTargetImage);
+          setTargetImage(randomTargetImage);
+          
+          // Update the room with the new target image
+          const { error } = await supabase
+            .from('game_rooms')
+            .update({ target_image_url: randomTargetImage.url })
+            .eq('id', currentRoom.id);
+            
+          if (error) {
+            console.error("Error updating room with target image:", error);
+          }
         }
       } else {
-        toast.error("No target image available");
+        toast.error("No room available");
         return;
       }
       
+      console.log("Final target image set:", targetImage);
       setShowGame(true);
     } catch (error) {
       console.error("Error starting game:", error);
@@ -211,7 +253,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
       onExit={() => setShowGame(false)} 
       gameMode={selectedGameMode} 
       difficulty={selectedDifficulty} 
-      targetImage={targetImage?.url} 
+      targetImage={targetImage?.url || ""} 
     />;
   }
 

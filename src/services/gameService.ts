@@ -12,6 +12,7 @@ export const generateRoomCode = (): string => {
 // Get random target image from the database
 export const getRandomTargetImage = async (difficulty: Difficulty): Promise<TargetImage | null> => {
   try {
+    console.log(`Fetching random target image with difficulty: ${difficulty}`);
     const { data, error } = await supabase
       .from('target_images')
       .select('*')
@@ -20,7 +21,12 @@ export const getRandomTargetImage = async (difficulty: Difficulty): Promise<Targ
       .limit(1)
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching target image:', error);
+      throw error;
+    }
+    
+    console.log('Fetched target image:', data);
     return data as TargetImage;
   } catch (error) {
     console.error('Error fetching target image:', error);
@@ -45,6 +51,8 @@ export const createGameRoom = async (
       toast.error('Failed to fetch a target image');
       return null;
     }
+    
+    console.log('Using target image for new room:', targetImage);
     
     // Insert room into database
     const { data, error } = await supabase
@@ -73,14 +81,10 @@ export const createGameRoom = async (
     
     if (playerError) throw playerError;
     
-    // Get user metadata safely
-    const username = owner.user_metadata?.username || 'Player';
-    const avatarUrl = owner.user_metadata?.avatar_url;
-    
     const player: Player = {
       id: owner.id,
-      username: username,
-      avatar_url: avatarUrl
+      username: owner.username || owner.user_metadata?.username || 'Player',
+      avatar_url: owner.avatar_url || owner.user_metadata?.avatar_url
     };
     
     const room: GameRoom = {
@@ -158,17 +162,24 @@ export const joinGameRoom = async (
     // Get target image if available
     let targetImage: TargetImage | null = null;
     if (roomData.target_image_url) {
+      console.log(`Fetching target image with URL: ${roomData.target_image_url}`);
       // Try to find the target image in the database
-      const { data: imageData } = await supabase
+      const { data: imageData, error: imageError } = await supabase
         .from('target_images')
         .select('*')
         .eq('url', roomData.target_image_url)
         .maybeSingle();
       
+      if (imageError) {
+        console.error('Error fetching target image:', imageError);
+      }
+      
       if (imageData) {
+        console.log('Found target image in database:', imageData);
         targetImage = imageData as TargetImage;
       } else {
         // Create a placeholder target image if not found
+        console.log('Creating placeholder for target image');
         targetImage = {
           id: 'placeholder',
           url: roomData.target_image_url,
@@ -176,14 +187,38 @@ export const joinGameRoom = async (
           name: 'Target Image'
         };
       }
+    } else {
+      // If no target image URL, fetch a random one
+      console.log('No target image URL found, fetching random one');
+      targetImage = await getRandomTargetImage(roomData.difficulty as Difficulty);
+      
+      if (targetImage) {
+        // Update the room with the new target image
+        await supabase
+          .from('game_rooms')
+          .update({ target_image_url: targetImage.url })
+          .eq('id', roomData.id);
+      }
     }
     
-    // Map player profiles correctly - make sure we're handling the data structure properly
-    const mappedPlayers: Player[] = players.map(p => ({
-      id: p.profiles.id,
-      username: p.profiles.username || 'Player',
-      avatar_url: p.profiles.avatar_url
-    }));
+    // Map player profiles correctly
+    const mappedPlayers: Player[] = players.map(p => {
+      // Check if profiles data is available
+      if (p.profiles) {
+        return {
+          id: p.profiles.id,
+          username: p.profiles.username || 'Player',
+          avatar_url: p.profiles.avatar_url
+        };
+      } else {
+        // Fallback if profile is not found
+        return {
+          id: p.user_id,
+          username: 'Player',
+          avatar_url: undefined
+        };
+      }
+    });
     
     const room: GameRoom = {
       ...roomData,

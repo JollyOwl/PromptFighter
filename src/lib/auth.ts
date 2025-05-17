@@ -1,8 +1,14 @@
+
 import { supabase } from './supabase';
-import { User, UserResponse } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
-export interface AuthUser extends User {
+// Fix the AuthUser type to correctly extend User type
+export interface AuthUser {
+  id: string;
+  email: string;
+  username: string;
+  avatar_url?: string;
   user_metadata?: {
     username?: string;
     avatar_url?: string;
@@ -42,15 +48,17 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         id: user.id,
         email: user.email!,
         username: user.email?.split('@')[0] || 'utilisateur',
-        avatar_url: undefined
+        avatar_url: undefined,
+        user_metadata: user.user_metadata
       };
     }
     
     return {
       id: user.id,
       email: user.email!,
-      username: profile.username,
-      avatar_url: profile.avatar_url || undefined
+      username: profile.username || user.email?.split('@')[0] || 'utilisateur',
+      avatar_url: profile.avatar_url || undefined,
+      user_metadata: user.user_metadata
     };
   } catch (error) {
     console.error("Erreur lors de la récupération de l'utilisateur:", error);

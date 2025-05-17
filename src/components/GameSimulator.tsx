@@ -12,7 +12,7 @@ interface GameSimulatorProps {
   onExit: () => void;
   gameMode: string;
   difficulty: string;
-  targetImage?: string;
+  targetImage: string;
 }
 
 // Temps de jeu selon la difficulté (en secondes)
@@ -38,7 +38,10 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
   // Debug the target image
   useEffect(() => {
     console.log("Target image URL:", targetImageUrl);
-  }, [targetImage, targetImageUrl]);
+    if (targetImageUrl === "/placeholder.svg") {
+      console.log("WARNING: Using placeholder image instead of a real target image!");
+    }
+  }, [targetImageUrl]);
 
   // Compter à rebours
   useEffect(() => {
@@ -57,11 +60,11 @@ const GameSimulator = ({ onExit, gameMode, difficulty, targetImage }: GameSimula
   }, [timeLeft, gamePhase]);
   
   // Formater le temps restant
-  const formatTime = (seconds: number) => {
+  function formatTime(seconds: number) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  }
   
   // Generate image using our edge function
   const handleGenerateImage = async () => {

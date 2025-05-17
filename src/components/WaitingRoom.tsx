@@ -100,11 +100,21 @@ const WaitingRoom = ({
       if (error) throw error;
       
       // Map the nested profile data to Player objects
-      const mappedPlayers: Player[] = data.map(p => ({
-        id: p.profiles.id,
-        username: p.profiles.username || 'Player',
-        avatar_url: p.profiles.avatar_url
-      }));
+      const mappedPlayers: Player[] = data.map(p => {
+        if (p.profiles) {
+          return {
+            id: p.profiles.id,
+            username: p.profiles.username || 'Player',
+            avatar_url: p.profiles.avatar_url
+          };
+        } else {
+          return {
+            id: p.user_id,
+            username: 'Player',
+            avatar_url: undefined
+          };
+        }
+      });
       
       setPlayers(mappedPlayers);
       
