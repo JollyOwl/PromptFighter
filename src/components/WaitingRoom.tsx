@@ -1,263 +1,91 @@
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
-import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
-import { Users, Copy, PlayCircle, ArrowLeft } from "lucide-react";
-import { useGameStore } from "@/store/gameStore";
-import { GameRoom, Player } from "@/types/game";
-import { Badge } from "./ui/badge";
-import { startGameSession } from "@/services/gameService";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
+import { GameRoom } from '@/types/game';
+import { useUser } from '@/lib/auth';
+import { leaveGameRoom, startGameSession } from '@/services/gameService';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 
 interface WaitingRoomProps {
   room: GameRoom;
   isOwner: boolean;
-  onStartGame: () => void;
-  onLeaveRoom: () => void;
+  onLeave: () => void;
+  onStart: () => void;
 }
 
-const WaitingRoom = ({ 
-  room, 
-  isOwner,
-  onStartGame, 
-  onLeaveRoom 
-}: WaitingRoomProps) => {
-  const { user } = useAuth();
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [players, setPlayers] = useState<Player[]>(room.players || []);
-  const { setCurrentRoom } = useGameStore();
-  
+const WaitingRoom = ({ room, isOwner, onLeave, onStart }: WaitingRoomProps) => {
+  const navigate = useNavigate();
+  const user = useUser();
+
   useEffect(() => {
-    if (!room || !user) return;
-    
-    // Subscribe to player changes in this room
-    const playersSubscription = supabase
-      .channel(`room-${room.id}-players`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'game_players',
-          filter: `room_id=eq.${room.id}`
-        },
-        () => {
-          fetchPlayers();
-        }
-      )
-      .subscribe();
-    
-    // Subscribe to room changes
-    const roomSubscription = supabase
-      .channel(`room-${room.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_rooms',
-          filter: `id=eq.${room.id}`
-        },
-        async (payload) => {
-          // If room status changed to playing, start the game
-          if (payload.new.status === 'playing' && room.status === 'waiting') {
-            onStartGame();
-          }
-          
-          // Update current room with new data
-          const updatedRoom = { ...room, ...payload.new };
-          setCurrentRoom(updatedRoom);
-        }
-      )
-      .subscribe();
-    
-    // Initial fetch of players
-    fetchPlayers();
-    
-    return () => {
-      supabase.removeChannel(playersSubscription);
-      supabase.removeChannel(roomSubscription);
-    };
-  }, [onStartGame, room, setCurrentRoom, user]);
-  
-  const fetchPlayers = useCallback(async () => {
-    if (!room) return;
-    try {
-      const { data, error } = await supabase
-        .from('game_players')
-        .select(`
-          user_id,
-          profiles:user_id (
-            id,
-            username,
-            avatar_url
-          )
-        `)
-        .eq('room_id', room.id);
-      
-      if (error) throw error;
-      
-      // Map the nested profile data to Player objects
-      const mappedPlayers: Player[] = data.map(p => {
-        if (p.profiles) {
-          return {
-            id: p.profiles.id,
-            username: p.profiles.username || 'Player',
-            avatar_url: p.profiles.avatar_url
-          };
-        } else {
-          return {
-            id: p.user_id,
-            username: 'Player',
-            avatar_url: undefined
-          };
-        }
-      });
-      
-      setPlayers(mappedPlayers);
-      
-      // Update current room with new players
-      setCurrentRoom({
-        ...room,
-        players: mappedPlayers
-      });
-    } catch (error) {
-      console.error("Error fetching players:", error);
+    if (!user) {
+      navigate('/login');
     }
-  }, [room, setCurrentRoom]);
-  
-  const copyJoinCode = () => {
-    navigator.clipboard.writeText(room.join_code);
-    setCopiedCode(true);
-    toast.success("Code copié dans le presse-papier!");
-    
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
-  
-  const handleStartGame = async () => {
-    if (!isOwner || !user) return;
-    
-    const success = await startGameSession(room.id, user.id);
+  }, [user, navigate]);
+
+  const handleLeave = async () => {
+    if (!user || !room) return;
+    const success = await leaveGameRoom(room.id, user.id);
     if (success) {
-      toast.success("La partie commence !");
-      onStartGame();
+      toast.success('Left the room');
+      onLeave();
+    } else {
+      toast.error('Failed to leave the room');
     }
   };
-  
-  return (
-    <div className="space-y-6">
-      <Button 
-        variant="ghost" 
-        onClick={onLeaveRoom}
-        className="mb-4 text-promptfighter-neon hover:bg-promptfighter-neon/20"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Quitter la salle
-      </Button>
-      
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white retro-text">
-            {room.name}
-          </h2>
-          <p className="text-white/70">
-            Mode: {room.game_mode === "duel" ? "Duel" : "Équipe"} | 
-            Difficulté: {
-              room.difficulty === "easy" ? "Facile" :
-              room.difficulty === "medium" ? "Intermédiaire" : "Difficile"
-            }
-          </p>
-        </div>
-        
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-white font-medium">Code de la salle:</span>
-            <Badge variant="secondary" className="bg-promptfighter-neon/20 text-promptfighter-neon text-lg font-mono border border-promptfighter-neon/50">
-              {room.join_code}
-            </Badge>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={copyJoinCode}
-              className="h-8 px-2 text-promptfighter-neon hover:bg-promptfighter-neon/20"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {copiedCode && (
-            <p className="text-xs text-promptfighter-neon animate-pulse">
-              Code copié !
-            </p>
+
+  const handleStart = async () => {
+    if (!room) return;
+    const success = await startGameSession(room.id, room.owner_id);
+    if (success) {
+      toast.success('Game started!');
+      onStart();
+    } else {
+      toast.error('Failed to start the game');
+    }
+  };
+
+  const renderPlayers = () => {
+    return room.players.map((player, index) => (
+      <div key={player.id || index} className="flex items-center space-x-2 p-2 rounded-md transition-colors border border-gray-800 bg-stone-900 hover:bg-stone-800">
+        <Avatar className="h-8 w-8 bg-stone-800">
+          {player.avatar_url ? (
+            <AvatarImage src={player.avatar_url} alt={player.username} />
+          ) : (
+            <AvatarFallback className="text-xs">{player.username?.charAt(0).toUpperCase() || '?'}</AvatarFallback>
           )}
+        </Avatar>
+        <span className="text-sm font-medium">{player.username || 'Player'}</span>
+        {room.owner_id === player.id && (
+          <span className="ml-1 text-xs px-1 py-0.5 bg-primary/20 text-primary rounded">Host</span>
+        )}
+      </div>
+    ));
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Waiting Room: {room?.name}</h2>
+      
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold mb-2">Players:</h3>
+        <div className="flex flex-wrap gap-2">
+          {renderPlayers()}
         </div>
       </div>
-      
-      <Card className="bg-black/30 backdrop-blur-sm border-promptfighter-neon/30 neon-border">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-white flex items-center retro-text">
-              <Users className="mr-2 h-5 w-5 text-promptfighter-neon" />
-              Joueurs
-            </h3>
-            <Badge className="bg-promptfighter-neon text-promptfighter-black font-bold">
-              {players.length}/{room.max_players}
-            </Badge>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {players.map((player) => (
-              <div 
-                key={player.id}
-                className="bg-black/40 p-3 rounded-lg flex flex-col items-center gap-2 border border-promptfighter-neon/30 hover:border-promptfighter-neon/60 transition-all"
-              >
-                <div className="w-16 h-16 rounded-full bg-black/50 overflow-hidden border-2 border-promptfighter-neon/50">
-                  <img 
-                    src={player.avatar_url || "/placeholder.svg"}
-                    alt={player.username}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <p className="text-white font-medium text-center truncate w-full">{player.username}</p>
-              </div>
-            ))}
-            
-            {Array(room.max_players - players.length).fill(0).map((_, index) => (
-              <div 
-                key={`empty-${index}`}
-                className="bg-black/20 p-3 rounded-lg flex flex-col items-center gap-2 border border-dashed border-white/20"
-              >
-                <div className="w-16 h-16 rounded-full bg-black/30 flex items-center justify-center">
-                  <Users className="h-8 w-8 text-white/30" />
-                </div>
-                <p className="text-white/50 text-sm">En attente...</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-      
-      {isOwner && (
-        <div className="flex justify-center pt-4">
-          <Button 
-            size="lg"
-            onClick={handleStartGame}
-            disabled={players.length < 2}
-            className="bg-promptfighter-neon hover:bg-promptfighter-neon/90 text-promptfighter-black font-bold px-8 py-6 text-lg border-2 border-transparent hover:border-promptfighter-neon hover:text-promptfighter-neon hover:bg-transparent transition-all retro-text"
-          >
-            <PlayCircle className="mr-2 h-6 w-6" />
-            Lancer la partie
+
+      <div className="flex justify-between">
+        <Button variant="destructive" onClick={handleLeave}>
+          Leave Room
+        </Button>
+        {isOwner && (
+          <Button onClick={handleStart}>
+            Start Game
           </Button>
-        </div>
-      )}
-      
-      {!isOwner && (
-        <div className="text-center p-4 bg-black/30 rounded-lg border border-promptfighter-neon/20">
-          <p className="text-promptfighter-neon">En attente du lancement de la partie par l'hôte...</p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

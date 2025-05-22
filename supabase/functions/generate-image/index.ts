@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -33,33 +34,60 @@ serve(async (req) => {
     );
   }
 
-  const openaiRes = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-image-1",
-      prompt,
-      n: 1,
-      size: "512x512"
-    }),
-  });
+  try {
+    console.log(`Generating image with prompt: "${prompt}"`);
+    
+    const openaiRes = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1024x1024"
+      }),
+    });
 
-  if (!openaiRes.ok) {
-    const error = await openaiRes.json();
+    if (!openaiRes.ok) {
+      const errorData = await openaiRes.json();
+      console.error("OpenAI API error:", errorData);
+      return new Response(
+        JSON.stringify({ 
+          error: errorData.error?.message || "Erreur OpenAI", 
+          status: openaiRes.status 
+        }),
+        { status: openaiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const data = await openaiRes.json();
+    
+    if (!data.data || !data.data[0] || !data.data[0].url) {
+      console.error("Unexpected OpenAI response format:", data);
+      return new Response(
+        JSON.stringify({ error: "Format de réponse OpenAI inattendu" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const timestamp = new Date().toISOString();
     return new Response(
-      JSON.stringify({ error: error.error?.message || "Erreur OpenAI" }),
+      JSON.stringify({ 
+        data: data.data,
+        prompt,
+        timestamp
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+    
+  } catch (error) {
+    console.error("Error generating image:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "Erreur interne" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-
-  const data = await openaiRes.json();
-  const imageUrl = data.data?.[0]?.url;
-
-  return new Response(
-    JSON.stringify({ imageUrl }),
-    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
 });

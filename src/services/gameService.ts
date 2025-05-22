@@ -168,48 +168,6 @@ export const joinGameRoom = async (
     
     if (playersError) throw playersError;
     
-    // Get target image if available
-    let targetImage: TargetImage | null = null;
-    if (roomData.target_image_url) {
-      console.log(`Fetching target image with URL: ${roomData.target_image_url}`);
-      // Try to find the target image in the database
-      const { data: imageData, error: imageError } = await supabase
-        .from('target_images')
-        .select('*')
-        .eq('url', roomData.target_image_url)
-        .maybeSingle();
-      
-      if (imageError) {
-        console.error('Error fetching target image:', imageError);
-      }
-      
-      if (imageData) {
-        console.log('Found target image in database:', imageData);
-        targetImage = imageData as TargetImage;
-      } else {
-        // Create a placeholder target image if not found
-        console.log('Creating placeholder for target image');
-        targetImage = {
-          id: 'placeholder',
-          url: roomData.target_image_url,
-          difficulty: roomData.difficulty as Difficulty,
-          name: 'Target Image'
-        };
-      }
-    } else {
-      // If no target image URL, fetch a random one
-      console.log('No target image URL found, fetching random one');
-      targetImage = await getRandomTargetImage(roomData.difficulty as Difficulty);
-      
-      if (targetImage) {
-        // Update the room with the new target image
-        await supabase
-          .from('game_rooms')
-          .update({ target_image_url: targetImage.url })
-          .eq('id', roomData.id);
-      }
-    }
-    
     // Map player profiles correctly
     const mappedPlayers: Player[] = players.map(p => {
       // Check if profiles data is available
