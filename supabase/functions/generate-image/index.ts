@@ -44,7 +44,8 @@ serve(async (req) => {
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: "gpt-image-1",
+        quality="low"
         prompt,
         n: 1,
         size: "1024x1024"
