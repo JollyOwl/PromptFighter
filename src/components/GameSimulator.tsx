@@ -9,6 +9,7 @@ import { generateAIImage, getRandomTargetImage } from "@/services/gameService";
 import { useAuth } from "@/hooks/useAuth";
 import { Difficulty, GamePhase, GameRoom, Player, Point, TargetImage } from "@/types/game";
 import { useGameStore } from '@/store/gameStore';
+import { generateImageWithSupabaseFunction } from "@/lib/dalleApi";
 
 interface GameSimulatorProps {
   room: GameRoom;
@@ -31,7 +32,7 @@ export function GameSimulator({ room, currentPlayer, onGamePhaseChange, onGameEn
   const [timeLeft, setTimeLeft] = useState(room?.difficulty === "easy" ? 120 : room?.difficulty === "medium" ? 180 : 240);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [generatedImages, setGeneratedImages] = useState<{ url: string, accuracy: number }[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [accuracyScore, setAccuracyScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,90 +96,33 @@ export function GameSimulator({ room, currentPlayer, onGamePhaseChange, onGameEn
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
   
-  // Generate image using our edge function
+  // Generate AI image based on prompt
   const handleGenerateImage = async () => {
-    if (!prompt.trim()) {
-      toast.error("Veuillez saisir un prompt");
-      return;
-    }
-    
     setLoading(true);
-    
     try {
-      const imageUrl = await generateAIImage(prompt);
-      
+      const imageUrl = await generateImageWithSupabaseFunction(prompt);
       if (imageUrl) {
-        const updatedImages = [...generatedImages, imageUrl];
-        setGeneratedImages(updatedImages);
-        
-        // Simuler un score d'accuracy
-        const randomScore = Math.floor(Math.random() * 70) + 30; // Entre 30 et 100
-        setAccuracyScore(randomScore);
-        
-        // Sélectionner automatiquement la première image générée si aucune n'est déjà sélectionnée
-        if (!selectedImage) {
-          setSelectedImage(imageUrl);
-        }
-        
-        toast.success("Image générée avec succès!");
+        const accuracy = calculateAccuracy(imageUrl, currentTargetImage.url);
+        setGeneratedImages((prev) => [...prev, { url: imageUrl, accuracy }]);
+        setAccuracyScore(accuracy);
       }
     } catch (error) {
-      console.error('Error generating image:', error);
-      toast.error("Erreur lors de la génération de l'image");
+      toast.error(error instanceof Error ? error.message : "Erreur lors de la génération d'image");
     } finally {
       setLoading(false);
     }
   };
+
+  // Function to calculate accuracy score
+  function calculateAccuracy(generatedImageUrl: string, targetImageUrl: string): number {
+    // Implement your logic to calculate accuracy
+    // This is a placeholder for demonstration
+    return Math.random() * 100; // Replace with actual calculation logic
+  }
   
   // Simuler le passage à la phase de résultats
   const showResults = () => {
     setGamePhase("results");
-  };
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setIsDrawing(true);
-    setLastPoint({ x, y });
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !lastPoint) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.beginPath();
-      ctx.moveTo(lastPoint.x, lastPoint.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    }
-
-    setLastPoint({ x, y });
-  };
-
-  const handleMouseUp = () => {
-    setIsDrawing(false);
-    setLastPoint(null);
   };
 
   const handleUndo = () => {
@@ -240,10 +184,6 @@ export function GameSimulator({ room, currentPlayer, onGamePhaseChange, onGameEn
                 <canvas
                   ref={canvasRef}
                   className="absolute inset-0 w-full h-full"
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
                 />
                 {currentTargetImage && (
                   <img
@@ -297,32 +237,14 @@ export function GameSimulator({ room, currentPlayer, onGamePhaseChange, onGameEn
                   </Button>
                 </div>
 
-                {generatedImages.length > 0 && (
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    {generatedImages.map((imageUrl, index) => (
-                      <div
-                        key={index}
-                        className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 ${
-                          selectedImage === imageUrl
-                            ? "border-promptfighter-pink"
-                            : "border-transparent"
-                        }`}
-                        onClick={() => setSelectedImage(imageUrl)}
-                      >
-                        <img
-                          src={imageUrl}
-                          alt={`Generated ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        {selectedImage === imageUrl && (
-                          <div className="absolute inset-0 bg-promptfighter-pink/20 flex items-center justify-center">
-                            <Check className="h-8 w-8 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="generated-images">
+                  {generatedImages.map((image, index) => (
+                    <div key={index} className="generated-image">
+                      <img src={image.url} alt={`Generated ${index}`} className="object-contain max-h-full" />
+                      <p className="text-white/70">Accuracy: {image.accuracy.toFixed(2)}%</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           )}

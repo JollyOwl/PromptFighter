@@ -1,61 +1,65 @@
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Mock image generation function
-// In production, this would call an AI image generation service
-async function generateImage(prompt: string): Promise<string> {
-  // For demo purposes, return a placeholder image
-  // In a real app, you would call DALL-E or another image generation API
-  const placeholderImages = [
-    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809',
-    'https://images.unsplash.com/photo-1533738363-b7f9aef128ce', 
-    'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634',
-    'https://images.unsplash.com/photo-1520288992255-dfb30894896b',
-    'https://images.unsplash.com/photo-1518791841217-8f162f1e1131'
-  ];
-  
-  // Select a random image from the array
-  const randomIndex = Math.floor(Math.random() * placeholderImages.length);
-  return placeholderImages[randomIndex];
-}
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
+  let body;
   try {
-    const { prompt } = await req.json();
-    
-    if (!prompt) {
-      return new Response(
-        JSON.stringify({ error: 'Prompt is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Generate image URL
-    const imageUrl = await generateImage(prompt);
-    
+    body = await req.json();
+  } catch (e) {
     return new Response(
-      JSON.stringify({ 
-        imageUrl,
-        prompt,
-        timestamp: new Date().toISOString()
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: "Invalid or missing JSON body" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+
+  if (!body || !body.prompt) {
+    return new Response(
+      JSON.stringify({ error: "Prompt requis dans le body JSON" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const prompt = body.prompt;
+
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: "Clé API OpenAI manquante" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const openaiRes = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-image-1",
+      prompt,
+      n: 1,
+      size: "512x512"
+    }),
+  });
+
+  if (!openaiRes.ok) {
+    const error = await openaiRes.json();
+    return new Response(
+      JSON.stringify({ error: error.error?.message || "Erreur OpenAI" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const data = await openaiRes.json();
+  const imageUrl = data.data?.[0]?.url;
+
+  return new Response(
+    JSON.stringify({ imageUrl }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
 });

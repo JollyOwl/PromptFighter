@@ -13,62 +13,29 @@ export const getRandomTargetImage = async (difficulty: Difficulty): Promise<Targ
   try {
     console.log(`Fetching random target image with difficulty: ${difficulty}`);
     
-    // First, get all images for the given difficulty
-    const { data, error } = await supabase
-      .from('target_images')
-      .select('*')
-      .eq('difficulty', difficulty);
-    
-    if (error) {
-      console.error('Error fetching target images:', error);
-      
-      // If no images found, initialize the database
-      if (error.code === 'PGRST116') {
-        console.log('No target images found, initializing database...');
-        await initializeTargetImages();
-        
-        // Try fetching again after initialization
-        const { data: newData, error: newError } = await supabase
-          .from('target_images')
-          .select('*')
-          .eq('difficulty', difficulty);
-          
-        if (newError) throw newError;
-        
-        // If we have images, select one randomly
-        if (newData && newData.length > 0) {
-          const randomIndex = Math.floor(Math.random() * newData.length);
-          return newData[randomIndex] as TargetImage;
-        }
-      }
-      
-      throw error;
+    const fetchImages = async () => {
+      const { data, error } = await supabase
+        .from('target_images')
+        .select('*')
+        .eq('difficulty', difficulty);
+      if (error) throw error;
+      return data;
+    };
+
+    let data = await fetchImages();
+
+    if (!data || data.length === 0) {
+      console.log('No target images found, initializing database...');
+      await initializeTargetImages();
+      data = await fetchImages();
     }
-    
-    // If we have images, select one randomly
+
     if (data && data.length > 0) {
       const randomIndex = Math.floor(Math.random() * data.length);
       console.log('Fetched target image:', data[randomIndex]);
       return data[randomIndex] as TargetImage;
     }
-    
-    // If no images found, initialize the database
-    console.log('No target images found, initializing database...');
-    await initializeTargetImages();
-    
-    // Try one final time after initialization
-    const { data: finalData, error: finalError } = await supabase
-      .from('target_images')
-      .select('*')
-      .eq('difficulty', difficulty);
-      
-    if (finalError) throw finalError;
-    
-    if (finalData && finalData.length > 0) {
-      const randomIndex = Math.floor(Math.random() * finalData.length);
-      return finalData[randomIndex] as TargetImage;
-    }
-    
+
     return null;
   } catch (error) {
     console.error('Error fetching target image:', error);
@@ -415,3 +382,28 @@ export const initializeTargetImages = async () => {
     console.error('Error initializing target images:', error);
   }
 };
+
+// Generate AI image based on prompt
+const handleGenerateImage = async () => {
+  setLoading(true);
+  try {
+    const imageUrl = await generateAIImage(prompt);
+    if (imageUrl) {
+      setGeneratedImages((prev) => [...prev, imageUrl]);
+      // Calculate accuracy score immediately
+      const accuracy = calculateAccuracy(imageUrl, currentTargetImage.url);
+      setAccuracyScore(accuracy);
+    }
+  } catch (error) {
+    console.error('Error generating image:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Function to calculate accuracy score
+function calculateAccuracy(generatedImageUrl: string, targetImageUrl: string): number {
+  // Implement your logic to calculate accuracy
+  // This is a placeholder for demonstration
+  return Math.random() * 100; // Replace with actual calculation logic
+}
