@@ -1,9 +1,10 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { GameRoom } from '@/types/game';
-import { useUser } from '@/lib/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { leaveGameRoom, startGameSession } from '@/services/gameService';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,7 @@ interface WaitingRoomProps {
 
 const WaitingRoom = ({ room, isOwner, onLeave, onStart }: WaitingRoomProps) => {
   const navigate = useNavigate();
-  const user = useUser();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!user) {

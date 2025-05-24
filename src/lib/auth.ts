@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   username: string;
   avatar_url?: string;
+  created_at?: string;
   user_metadata?: {
     username?: string;
     avatar_url?: string;
@@ -37,7 +38,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     // Récupérer les informations du profil
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username, avatar_url')
+      .select('username, avatar_url, created_at')
       .eq('id', user.id)
       .maybeSingle();
       
@@ -49,6 +50,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         email: user.email!,
         username: user.email?.split('@')[0] || 'utilisateur',
         avatar_url: undefined,
+        created_at: user.created_at,
         user_metadata: user.user_metadata
       };
     }
@@ -58,6 +60,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       email: user.email!,
       username: profile.username || user.email?.split('@')[0] || 'utilisateur',
       avatar_url: profile.avatar_url || undefined,
+      created_at: profile.created_at || user.created_at,
       user_metadata: user.user_metadata
     };
   } catch (error) {
@@ -133,18 +136,40 @@ export async function signIn({ email, password }: SignInCredentials) {
   try {
     console.log("Tentative de connexion:", email);
     
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // First try to sign in with email
+    let signInResult = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
-    if (error || !data.user) {
-      console.error("Erreur de connexion:", error);
-      throw error || new Error("Échec de la connexion");
+    // If email login fails, try with username
+    if (signInResult.error && !email.includes('@')) {
+      // Look up user by username to get their email
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', email)
+        .single();
+      
+      if (profile) {
+        // Get the user's email from auth.users
+        const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
+        if (userData.user) {
+          signInResult = await supabase.auth.signInWithPassword({
+            email: userData.user.email!,
+            password
+          });
+        }
+      }
+    }
+    
+    if (signInResult.error || !signInResult.data.user) {
+      console.error("Erreur de connexion:", signInResult.error);
+      throw signInResult.error || new Error("Échec de la connexion");
     }
     
     toast.success("Connexion réussie !");
-    return data.user;
+    return signInResult.data.user;
   } catch (error: unknown) {
     console.error("Erreur lors de la connexion:", error);
     toast.error(error instanceof Error ? error.message : "Échec de la connexion");
@@ -166,4 +191,9 @@ export async function signOut() {
     toast.error(error instanceof Error ? error.message : "Échec de la connexion");
     throw error;
   }
+}
+
+// Hook for easier access
+export function useUser() {
+  return useAuth().user;
 }
