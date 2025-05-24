@@ -192,8 +192,3 @@ export async function signOut() {
     throw error;
   }
 }
-
-// Hook for easier access
-export function useUser() {
-  return useAuth().user;
-}

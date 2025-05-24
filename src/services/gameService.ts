@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { AuthUser } from "@/lib/auth";
 import { GameRoom, Player, GameMode, Difficulty, TargetImage } from "@/types/game";
@@ -173,9 +174,9 @@ export const joinGameRoom = async (
       // Check if profiles data is available
       if (p.profiles) {
         return {
-          id: p.profiles.id,
-          username: p.profiles.username || 'Player',
-          avatar_url: p.profiles.avatar_url
+          id: (p.profiles as any).id,
+          username: (p.profiles as any).username || 'Player',
+          avatar_url: (p.profiles as any).avatar_url
         };
       } else {
         // Fallback if profile is not found
@@ -186,6 +187,20 @@ export const joinGameRoom = async (
         };
       }
     });
+    
+    // Get target image for the room
+    let targetImage: TargetImage | null = null;
+    if (roomData.target_image_url) {
+      const { data: imageData } = await supabase
+        .from('target_images')
+        .select('*')
+        .eq('url', roomData.target_image_url)
+        .maybeSingle();
+      
+      if (imageData) {
+        targetImage = imageData as TargetImage;
+      }
+    }
     
     const room: GameRoom = {
       ...roomData,
@@ -340,28 +355,3 @@ export const initializeTargetImages = async () => {
     console.error('Error initializing target images:', error);
   }
 };
-
-// Generate AI image based on prompt
-const handleGenerateImage = async () => {
-  setLoading(true);
-  try {
-    const imageUrl = await generateAIImage(prompt);
-    if (imageUrl) {
-      setGeneratedImages((prev) => [...prev, imageUrl]);
-      // Calculate accuracy score immediately
-      const accuracy = calculateAccuracy(imageUrl, currentTargetImage.url);
-      setAccuracyScore(accuracy);
-    }
-  } catch (error) {
-    console.error('Error generating image:', error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-// Function to calculate accuracy score
-function calculateAccuracy(generatedImageUrl: string, targetImageUrl: string): number {
-  // Implement your logic to calculate accuracy
-  // This is a placeholder for demonstration
-  return Math.random() * 100; // Replace with actual calculation logic
-}

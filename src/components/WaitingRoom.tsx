@@ -14,9 +14,11 @@ interface WaitingRoomProps {
   isOwner: boolean;
   onLeave: () => void;
   onStart: () => void;
+  onStartGame?: () => Promise<void>;
+  onLeaveRoom?: () => Promise<void>;
 }
 
-const WaitingRoom = ({ room, isOwner, onLeave, onStart }: WaitingRoomProps) => {
+const WaitingRoom = ({ room, isOwner, onLeave, onStart, onStartGame, onLeaveRoom }: WaitingRoomProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -28,6 +30,12 @@ const WaitingRoom = ({ room, isOwner, onLeave, onStart }: WaitingRoomProps) => {
 
   const handleLeave = async () => {
     if (!user || !room) return;
+    
+    if (onLeaveRoom) {
+      await onLeaveRoom();
+      return;
+    }
+    
     const success = await leaveGameRoom(room.id, user.id);
     if (success) {
       toast.success('Left the room');
@@ -39,6 +47,12 @@ const WaitingRoom = ({ room, isOwner, onLeave, onStart }: WaitingRoomProps) => {
 
   const handleStart = async () => {
     if (!room) return;
+    
+    if (onStartGame) {
+      await onStartGame();
+      return;
+    }
+    
     const success = await startGameSession(room.id, room.owner_id);
     if (success) {
       toast.success('Game started!');
