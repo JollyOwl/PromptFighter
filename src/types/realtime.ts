@@ -10,12 +10,8 @@ export interface GameSession {
 }
 
 export interface PlayerAction {
-  id: string;
-  room_id: string;
-  player_id: string;
   action_type: 'join' | 'leave' | 'ready' | 'submit' | 'vote' | 'phase_change';
   action_data: Record<string, any>;
-  created_at: string;
 }
 
 export interface RealtimeGameState {
