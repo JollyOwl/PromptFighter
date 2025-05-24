@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { GameRoom, GamePhase } from '@/types/game';
 import { toast } from 'sonner';
+import { useActiveSession } from './useActiveSession';
 
 interface UseRealtimeGameProps {
   roomId: string | null;
@@ -14,59 +15,23 @@ interface UseRealtimeGameProps {
 export const useRealtimeGame = ({ roomId, onPhaseChange, onPlayerAction }: UseRealtimeGameProps) => {
   const { user } = useAuth();
   const [currentPhase, setCurrentPhase] = useState<GamePhase>('waiting');
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [isOwner, setIsOwner] = useState<boolean>(false);
 
-  // Check if user is room owner
-  useEffect(() => {
-    if (!roomId || !user) return;
-
-    const checkOwnership = async () => {
-      const { data } = await supabase
-        .from('game_rooms')
-        .select('owner_id, status')
-        .eq('id', roomId)
-        .single();
-      
-      if (data) {
-        setIsOwner(data.owner_id === user.id);
-        setCurrentPhase(data.status as GamePhase);
+  // Use the new active session hook
+  const {
+    currentSession,
+    timeLeft,
+    isOwner,
+    updatePhase,
+    fetchCurrentSession
+  } = useActiveSession({
+    roomId,
+    onPhaseChange: (phase) => {
+      setCurrentPhase(phase);
+      if (onPhaseChange) {
+        onPhaseChange(phase);
       }
-    };
-
-    checkOwnership();
-  }, [roomId, user]);
-
-  // Update game phase (only room owner)
-  const updatePhase = useCallback(async (newPhase: GamePhase, duration?: number) => {
-    if (!roomId || !isOwner) {
-      toast.error('Only room owner can change game phase');
-      return false;
     }
-
-    try {
-      const { data, error } = await supabase.rpc('update_game_phase', {
-        p_room_id: roomId,
-        p_new_phase: newPhase,
-        p_duration: duration || 180
-      });
-
-      if (error) throw error;
-
-      const result = data?.[0];
-      if (result?.success) {
-        toast.success(result.message);
-        return true;
-      } else {
-        toast.error(result?.message || 'Failed to update phase');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error updating phase:', error);
-      toast.error('Failed to update game phase');
-      return false;
-    }
-  }, [roomId, isOwner]);
+  });
 
   // Submit a vote
   const submitVote = useCallback(async (submissionId: string) => {
@@ -92,7 +57,7 @@ export const useRealtimeGame = ({ roomId, onPhaseChange, onPlayerAction }: UseRe
     }
   }, [roomId, user]);
 
-  // Log player action (using game_votes or game_submissions as activity tracking)
+  // Log player action
   const logPlayerAction = useCallback(async (actionType: string, actionData: any = {}) => {
     if (!roomId || !user) return;
 
@@ -100,56 +65,9 @@ export const useRealtimeGame = ({ roomId, onPhaseChange, onPlayerAction }: UseRe
     // For now, we'll just log to console since we don't have a player_actions table
   }, [roomId, user]);
 
-  // Fetch current room status
-  const fetchCurrentSession = useCallback(async () => {
-    if (!roomId) return;
-
-    const { data, error } = await supabase
-      .from('game_rooms')
-      .select('status')
-      .eq('id', roomId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching room status:', error);
-      return;
-    }
-
-    if (data) {
-      setCurrentPhase(data.status as GamePhase);
-    }
-  }, [roomId]);
-
-  // Set up real-time subscriptions
+  // Set up real-time subscriptions for votes
   useEffect(() => {
     if (!roomId) return;
-
-    // Subscribe to game room status changes
-    const roomChannel = supabase
-      .channel(`game_room_${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_rooms',
-          filter: `id=eq.${roomId}`
-        },
-        (payload) => {
-          console.log('Game room change:', payload);
-          
-          if (payload.new && payload.new.status) {
-            const newPhase = payload.new.status as GamePhase;
-            setCurrentPhase(newPhase);
-            
-            // Notify about phase change
-            if (onPhaseChange) {
-              onPhaseChange(newPhase);
-            }
-          }
-        }
-      )
-      .subscribe();
 
     // Subscribe to votes to track voting progress
     const votesChannel = supabase
@@ -175,14 +93,10 @@ export const useRealtimeGame = ({ roomId, onPhaseChange, onPlayerAction }: UseRe
       )
       .subscribe();
 
-    // Fetch initial session
-    fetchCurrentSession();
-
     return () => {
-      roomChannel.unsubscribe();
       votesChannel.unsubscribe();
     };
-  }, [roomId, onPhaseChange, onPlayerAction, fetchCurrentSession]);
+  }, [roomId, onPlayerAction]);
 
   // Check for voting completion periodically (room owners only)
   useEffect(() => {
@@ -202,15 +116,15 @@ export const useRealtimeGame = ({ roomId, onPhaseChange, onPlayerAction }: UseRe
   }, [isOwner, currentPhase]);
 
   return {
-    currentSession: {
-      id: roomId || '',
-      room_id: roomId || '',
-      current_phase: currentPhase,
-      phase_start_time: new Date().toISOString(),
-      phase_duration: 180,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
+    currentSession: currentSession ? {
+      id: currentSession.id,
+      room_id: currentSession.room_id,
+      current_phase: currentSession.current_phase,
+      phase_start_time: currentSession.phase_start_time,
+      phase_duration: currentSession.phase_duration,
+      created_at: currentSession.start_time,
+      updated_at: currentSession.updated_at
+    } : null,
     timeLeft,
     isOwner,
     updatePhase,

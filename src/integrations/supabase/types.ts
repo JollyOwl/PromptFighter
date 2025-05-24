@@ -11,22 +11,34 @@ export type Database = {
     Tables: {
       active_sessions: {
         Row: {
+          current_phase: string | null
           id: string
           last_activity: string | null
+          phase_duration: number | null
+          phase_start_time: string | null
           room_id: string | null
           start_time: string | null
+          updated_at: string | null
         }
         Insert: {
+          current_phase?: string | null
           id?: string
           last_activity?: string | null
+          phase_duration?: number | null
+          phase_start_time?: string | null
           room_id?: string | null
           start_time?: string | null
+          updated_at?: string | null
         }
         Update: {
+          current_phase?: string | null
           id?: string
           last_activity?: string | null
+          phase_duration?: number | null
+          phase_start_time?: string | null
           room_id?: string | null
           start_time?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -37,6 +49,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cleanup_logs: {
+        Row: {
+          cleanup_details: Json | null
+          cleanup_reason: string | null
+          cleanup_timestamp: string | null
+          cleanup_type: string
+          created_at: string | null
+          execution_time_ms: number | null
+          id: string
+          players_cleaned: number | null
+          rooms_cleaned: number | null
+          sessions_cleaned: number | null
+          submissions_cleaned: number | null
+          votes_cleaned: number | null
+        }
+        Insert: {
+          cleanup_details?: Json | null
+          cleanup_reason?: string | null
+          cleanup_timestamp?: string | null
+          cleanup_type: string
+          created_at?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          players_cleaned?: number | null
+          rooms_cleaned?: number | null
+          sessions_cleaned?: number | null
+          submissions_cleaned?: number | null
+          votes_cleaned?: number | null
+        }
+        Update: {
+          cleanup_details?: Json | null
+          cleanup_reason?: string | null
+          cleanup_timestamp?: string | null
+          cleanup_type?: string
+          created_at?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          players_cleaned?: number | null
+          rooms_cleaned?: number | null
+          sessions_cleaned?: number | null
+          submissions_cleaned?: number | null
+          votes_cleaned?: number | null
+        }
+        Relationships: []
       }
       game_players: {
         Row: {
@@ -310,6 +367,18 @@ export type Database = {
         Returns: {
           room_id: string
           advanced: boolean
+        }[]
+      }
+      cleanup_inactive_rooms_and_sessions: {
+        Args: { p_cleanup_type?: string }
+        Returns: {
+          cleanup_id: string
+          cleaned_rooms: number
+          cleaned_sessions: number
+          cleaned_players: number
+          cleaned_votes: number
+          cleaned_submissions: number
+          execution_time_ms: number
         }[]
       }
       update_game_phase: {

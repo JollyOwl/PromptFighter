@@ -22,6 +22,17 @@ export interface GameVote {
   created_at: string;
 }
 
+export interface ActiveSession {
+  id: string;
+  room_id: string;
+  current_phase: GamePhase;
+  phase_start_time: string;
+  phase_duration: number;
+  start_time: string;
+  last_activity: string;
+  updated_at: string;
+}
+
 // Submit a game entry (image + prompt)
 export const submitGameEntry = async (
   roomId: string,
@@ -74,6 +85,23 @@ export const getRoomSubmissions = async (roomId: string): Promise<GameSubmission
   } catch (error) {
     console.error('Error fetching room submissions:', error);
     return [];
+  }
+};
+
+// Get current active session for a room
+export const getActiveSession = async (roomId: string): Promise<ActiveSession | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('active_sessions')
+      .select('*')
+      .eq('room_id', roomId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data as ActiveSession | null;
+  } catch (error) {
+    console.error('Error fetching active session:', error);
+    return null;
   }
 };
 
@@ -146,5 +174,25 @@ export const forceCheckVotingCompletion = async (): Promise<void> => {
     await supabase.rpc('check_voting_completion');
   } catch (error) {
     console.error('Error checking voting completion:', error);
+  }
+};
+
+// Manual cleanup function (for testing)
+export const runCleanup = async (): Promise<void> => {
+  try {
+    const { data, error } = await supabase.rpc('cleanup_inactive_rooms_and_sessions', {
+      p_cleanup_type: 'manual'
+    });
+
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      const result = data[0];
+      console.log('Cleanup completed:', result);
+      toast.success(`Cleanup completed: ${result.cleaned_rooms} rooms, ${result.cleaned_sessions} sessions cleaned`);
+    }
+  } catch (error) {
+    console.error('Error running cleanup:', error);
+    toast.error('Failed to run cleanup');
   }
 };
