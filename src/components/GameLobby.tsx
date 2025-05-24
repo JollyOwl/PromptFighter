@@ -117,17 +117,31 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
       return;
     }
     
-    const room = await createGameRoom(
-      roomName,
-      selectedGameMode,
-      selectedDifficulty,
-      user,
-      maxPlayers
-    );
-    
-    if (room) {
-      setCurrentRoom(room);
-      toast.success(`Room "${roomName}" created successfully!`);
+    try {
+      const room = await createGameRoom(
+        roomName,
+        selectedGameMode,
+        selectedDifficulty,
+        user,
+        maxPlayers
+      );
+      
+      if (room) {
+        setCurrentRoom(room);
+        setIsCreatingRoom(false); // Close the creation modal
+        toast.success(`Room "${roomName}" created successfully!`);
+        
+        // Check if we should start the game immediately (e.g., if room is full)
+        if (room.players && room.players.length >= room.max_players) {
+          // Auto-start if room is full
+          setTimeout(() => {
+            handleStartGame();
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating room:', error);
+      toast.error('Failed to create room');
     }
   };
   
@@ -137,10 +151,24 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
       return;
     }
     
-    const room = await joinGameRoom(joinCode, user);
-    if (room) {
-      setCurrentRoom(room);
-      toast.success(`You joined ${room.name}!`);
+    try {
+      const room = await joinGameRoom(joinCode, user);
+      if (room) {
+        setCurrentRoom(room);
+        setIsCreatingRoom(false); // Close the creation modal
+        toast.success(`You joined ${room.name}!`);
+        
+        // Check if we should start the game immediately (e.g., if room is full)
+        if (room.players && room.players.length >= room.max_players) {
+          // Auto-start if room is full
+          setTimeout(() => {
+            handleStartGame();
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.error('Error joining room:', error);
+      toast.error('Failed to join room');
     }
   };
 

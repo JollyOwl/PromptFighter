@@ -1,6 +1,4 @@
-
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { GameRoom } from '@/types/game';
@@ -19,14 +17,16 @@ interface WaitingRoomProps {
 }
 
 const WaitingRoom = ({ room, isOwner, onLeave, onStart, onStartGame, onLeaveRoom }: WaitingRoomProps) => {
-  const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Remove the redirect logic that was causing the 404
   useEffect(() => {
     if (!user) {
-      navigate('/login');
+      console.warn('User not authenticated in waiting room');
+      // Don't redirect, just show a warning
+      toast.error('Authentication required to access waiting room');
     }
-  }, [user, navigate]);
+  }, [user]);
 
   const handleLeave = async () => {
     if (!user || !room) return;

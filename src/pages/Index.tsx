@@ -83,7 +83,10 @@ const Index = () => {
         <Card className="w-full max-w-4xl bg-black/30 backdrop-blur-lg border-promptfighter-neon/20 shadow-xl neon-border">
           <CardContent className="p-6">
             {!user ? (
-              <AuthForm onLogin={() => {}} />
+              <AuthForm onLogin={() => {
+                // Stay on the same page after login, no redirect
+                console.log('User logged in successfully');
+              }} />
             ) : showRules ? (
               <GameRules onBack={() => setShowRules(false)} />
             ) : (
