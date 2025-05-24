@@ -297,6 +297,8 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
       <WaitingRoom
         room={currentRoom}
         isOwner={currentRoom.owner_id === user?.id}
+        onLeave={() => {}}
+        onStart={() => {}}
         onStartGame={handleStartGame}
         onLeaveRoom={handleLeaveRoom}
       />
