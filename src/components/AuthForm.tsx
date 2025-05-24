@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { signIn, signUp } from "@/lib/auth";
 import { useGameStore } from "@/store/gameStore";
 import { toast } from "sonner";
 import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
-import { avatarStyles, generateAvatarUrl } from "@/utils/avatarUtils";
+import { getAvatarFromUsername } from "@/utils/avatarUtils";
 
 interface AuthFormProps {
   onLogin: () => void;
@@ -19,7 +18,6 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  const [selectedAvatarId, setSelectedAvatarId] = useState(1);
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -36,22 +34,22 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
           password
         });
         if (user) {
+          const displayUsername = emailOrUsername.includes('@') ? emailOrUsername.split('@')[0] : emailOrUsername;
           setCurrentPlayer({
             id: user.id,
-            username: emailOrUsername.includes('@') ? emailOrUsername.split('@')[0] : emailOrUsername,
-            avatar_url: generateAvatarUrl(avatarStyles[0].style, avatarStyles[0].seed)
+            username: displayUsername,
+            avatar_url: getAvatarFromUsername(displayUsername)
           });
           onLogin();
         }
       } else {
-        const selectedAvatar = avatarStyles.find(a => a.id === selectedAvatarId);
-        const avatarUrl = selectedAvatar ? generateAvatarUrl(selectedAvatar.style, selectedAvatar.seed) : generateAvatarUrl(avatarStyles[0].style, avatarStyles[0].seed);
+        const avatarUrl = getAvatarFromUsername(username);
         
         const result = await signUp({
           email: emailOrUsername,
           password,
           username,
-          avatar_id: selectedAvatarId
+          avatar_id: 1 // No longer used but keeping for compatibility
         });
         if (result.user) {
           setCurrentPlayer({
@@ -195,29 +193,6 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
               >
                 {showPassword ? <EyeOff className="h-4 w-4 text-white/60" /> : <Eye className="h-4 w-4 text-white/60" />}
               </Button>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label className="text-white">Choisissez un avatar</Label>
-            <div className="grid grid-cols-4 gap-4 mt-2">
-              {avatarStyles.map(avatar => {
-                const avatarUrl = generateAvatarUrl(avatar.style, avatar.seed);
-                return (
-                  <Avatar 
-                    key={avatar.id} 
-                    className={`w-16 h-16 cursor-pointer transition-all ${
-                      selectedAvatarId === avatar.id ? "ring-4 ring-promptfighter-cyan" : "opacity-70 hover:opacity-100"
-                    }`} 
-                    onClick={() => setSelectedAvatarId(avatar.id)}
-                  >
-                    <AvatarImage src={avatarUrl} alt={avatar.name} />
-                    <AvatarFallback className="bg-promptfighter-lavender">
-                      {avatar.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                );
-              })}
             </div>
           </div>
           

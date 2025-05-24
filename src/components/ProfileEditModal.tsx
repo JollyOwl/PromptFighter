@@ -6,10 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useGameStore } from '@/store/gameStore';
 import { Loader2 } from 'lucide-react';
-import { avatarStyles, generateAvatarUrl, getAvatarIdFromUrl } from '@/utils/avatarUtils';
+import { getAvatarFromUsername } from '@/utils/avatarUtils';
 
 interface ProfileEditModalProps {
   onClose: () => void;
@@ -20,12 +19,6 @@ const ProfileEditModal = ({ onClose, onUserUpdate }: ProfileEditModalProps) => {
   const { user } = useAuth();
   const { setCurrentPlayer } = useGameStore();
   const [username, setUsername] = useState(user?.username || '');
-  const [selectedAvatarId, setSelectedAvatarId] = useState(() => {
-    if (user?.avatar_url) {
-      return getAvatarIdFromUrl(user.avatar_url);
-    }
-    return 1;
-  });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,8 +31,7 @@ const ProfileEditModal = ({ onClose, onUserUpdate }: ProfileEditModalProps) => {
     setLoading(true);
     
     try {
-      const selectedAvatar = avatarStyles.find(a => a.id === selectedAvatarId);
-      const avatarUrl = selectedAvatar ? generateAvatarUrl(selectedAvatar.style, selectedAvatar.seed) : generateAvatarUrl(avatarStyles[0].style, avatarStyles[0].seed);
+      const avatarUrl = getAvatarFromUsername(username.trim());
 
       const updatedUser = await updateProfile({
         username: username.trim(),
@@ -100,31 +92,9 @@ const ProfileEditModal = ({ onClose, onUserUpdate }: ProfileEditModalProps) => {
                 className="bg-white/10 border-promptfighter-neon/30 text-white placeholder:text-white/60"
                 required
               />
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-white">Avatar</Label>
-              <div className="grid grid-cols-4 gap-3">
-                {avatarStyles.map((avatar) => {
-                  const avatarUrl = generateAvatarUrl(avatar.style, avatar.seed);
-                  return (
-                    <Avatar
-                      key={avatar.id}
-                      className={`w-16 h-16 cursor-pointer transition-all ${
-                        selectedAvatarId === avatar.id
-                          ? "ring-2 ring-promptfighter-neon"
-                          : "opacity-70 hover:opacity-100"
-                      }`}
-                      onClick={() => setSelectedAvatarId(avatar.id)}
-                    >
-                      <AvatarImage src={avatarUrl} alt={avatar.name} />
-                      <AvatarFallback className="bg-promptfighter-neon/20 text-promptfighter-neon">
-                        {avatar.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                  );
-                })}
-              </div>
+              <p className="text-sm text-white/60">
+                Votre avatar sera automatiquement généré à partir de vos initiales
+              </p>
             </div>
 
             <div className="flex space-x-3 pt-4">
