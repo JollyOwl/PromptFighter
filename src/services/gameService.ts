@@ -227,11 +227,11 @@ export const joinGameRoom = async (
       return room;
     }
     
-    // Map player profiles correctly
-    const mappedPlayers: Player[] = playersWithProfiles.map(p => ({
-      id: p.profiles.id,
-      username: p.profiles.username || 'Player',
-      avatar_url: p.profiles.avatar_url
+    // Map player profiles correctly - fix the TypeScript error
+    const mappedPlayers: Player[] = playersWithProfiles.map((playerData: any) => ({
+      id: playerData.profiles.id,
+      username: playerData.profiles.username || 'Player',
+      avatar_url: playerData.profiles.avatar_url
     }));
     
     console.log('Mapped players:', mappedPlayers);
