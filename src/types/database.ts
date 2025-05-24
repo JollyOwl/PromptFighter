@@ -100,6 +100,61 @@ export interface Database {
           created_at?: string
         }
       }
+      game_votes: {
+        Row: {
+          id: string
+          room_id: string
+          voter_id: string
+          submission_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          voter_id: string
+          submission_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          voter_id?: string
+          submission_id?: string
+          created_at?: string
+        }
+      }
+      player_scores: {
+        Row: {
+          id: string
+          player_id: string
+          total_games: number
+          games_won: number
+          total_accuracy_score: number
+          avg_accuracy_score: number
+          total_votes_received: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          player_id: string
+          total_games?: number
+          games_won?: number
+          total_accuracy_score?: number
+          avg_accuracy_score?: number
+          total_votes_received?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          player_id?: string
+          total_games?: number
+          games_won?: number
+          total_accuracy_score?: number
+          avg_accuracy_score?: number
+          total_votes_received?: number
+          updated_at?: string
+        }
+      }
       profiles: {
         Row: {
           id: string

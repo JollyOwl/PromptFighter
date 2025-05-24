@@ -6,15 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, TrendingUp, Calendar, Mail, User } from 'lucide-react';
+import { Trophy, TrendingUp, Calendar, Mail, User, Target, Vote } from 'lucide-react';
 
 interface UserStats {
   totalGames: number;
   averageAccuracy: number;
-  accuracyByDifficulty: Record<string, number>;
-  accuracyByMode: Record<string, number>;
+  accuracyByDifficulty: Record<string, { accuracy: number; games: number }>;
+  accuracyByMode: Record<string, { accuracy: number; games: number }>;
   globalRank: number;
   totalUsers: number;
+  totalVotesReceived: number;
+  gamesWon: number;
 }
 
 interface UserProfileProps {
@@ -38,18 +40,85 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
     try {
       setLoading(true);
       
-      // This is a placeholder for the actual stats fetching
-      // You'll need to implement the actual database queries based on your game_submissions table
-      const mockStats: UserStats = {
-        totalGames: 0,
-        averageAccuracy: 0,
-        accuracyByDifficulty: {},
-        accuracyByMode: {},
-        globalRank: 1,
-        totalUsers: 1
+      // Get player scores
+      const { data: playerScores } = await supabase
+        .from('player_scores')
+        .select('*')
+        .eq('player_id', user.id)
+        .maybeSingle();
+
+      // Get detailed submission stats grouped by difficulty and mode
+      const { data: submissions } = await supabase
+        .from('game_submissions')
+        .select(`
+          accuracy_score,
+          game_rooms!inner(difficulty, game_mode)
+        `)
+        .eq('player_id', user.id);
+
+      // Get global ranking
+      const { data: allScores } = await supabase
+        .from('player_scores')
+        .select('player_id, avg_accuracy_score')
+        .order('avg_accuracy_score', { ascending: false });
+
+      // Calculate stats by difficulty
+      const accuracyByDifficulty: Record<string, { accuracy: number; games: number }> = {};
+      const accuracyByMode: Record<string, { accuracy: number; games: number }> = {};
+
+      if (submissions) {
+        submissions.forEach(submission => {
+          const difficulty = submission.game_rooms.difficulty;
+          const mode = submission.game_rooms.game_mode;
+          const score = submission.accuracy_score;
+
+          // Group by difficulty
+          if (!accuracyByDifficulty[difficulty]) {
+            accuracyByDifficulty[difficulty] = { accuracy: 0, games: 0 };
+          }
+          accuracyByDifficulty[difficulty].accuracy += score;
+          accuracyByDifficulty[difficulty].games += 1;
+
+          // Group by mode
+          if (!accuracyByMode[mode]) {
+            accuracyByMode[mode] = { accuracy: 0, games: 0 };
+          }
+          accuracyByMode[mode].accuracy += score;
+          accuracyByMode[mode].games += 1;
+        });
+
+        // Calculate averages
+        Object.keys(accuracyByDifficulty).forEach(key => {
+          const data = accuracyByDifficulty[key];
+          data.accuracy = data.accuracy / data.games;
+        });
+
+        Object.keys(accuracyByMode).forEach(key => {
+          const data = accuracyByMode[key];
+          data.accuracy = data.accuracy / data.games;
+        });
+      }
+
+      // Calculate global rank
+      let globalRank = 1;
+      const userScore = playerScores?.avg_accuracy_score || 0;
+      if (allScores) {
+        globalRank = allScores.findIndex(score => score.player_id === user.id) + 1;
+        if (globalRank === 0) globalRank = allScores.length + 1;
+      }
+
+      const calculatedStats: UserStats = {
+        totalGames: playerScores?.total_games || 0,
+        averageAccuracy: playerScores?.avg_accuracy_score || 0,
+        accuracyByDifficulty,
+        accuracyByMode,
+        globalRank,
+        totalUsers: allScores?.length || 1,
+        totalVotesReceived: playerScores?.total_votes_received || 0,
+        gamesWon: playerScores?.games_won || 0
       };
       
-      setStats(mockStats);
+      setStats(calculatedStats);
     } catch (error) {
       console.error('Error fetching user stats:', error);
     } finally {
@@ -61,7 +130,7 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl bg-black/80 backdrop-blur-lg border-promptfighter-neon/20 text-white">
+      <Card className="w-full max-w-4xl bg-black/80 backdrop-blur-lg border-promptfighter-neon/20 text-white max-h-[90vh] overflow-y-auto">
         <CardHeader className="border-b border-promptfighter-neon/20">
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl text-promptfighter-neon">Profil Utilisateur</CardTitle>
@@ -101,12 +170,12 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
           ) : stats ? (
             <div className="space-y-6">
               {/* Overall Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="bg-promptfighter-neon/10 border-promptfighter-neon/30">
                   <CardContent className="p-4 text-center">
                     <div className="flex items-center justify-center mb-2">
                       <Trophy className="h-6 w-6 text-promptfighter-neon mr-2" />
-                      <span className="text-promptfighter-neon font-semibold">Parties Jouées</span>
+                      <span className="text-promptfighter-neon font-semibold">Parties</span>
                     </div>
                     <div className="text-2xl font-bold text-white">{stats.totalGames}</div>
                   </CardContent>
@@ -116,7 +185,7 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
                   <CardContent className="p-4 text-center">
                     <div className="flex items-center justify-center mb-2">
                       <TrendingUp className="h-6 w-6 text-promptfighter-neon mr-2" />
-                      <span className="text-promptfighter-neon font-semibold">Précision Moyenne</span>
+                      <span className="text-promptfighter-neon font-semibold">Précision Moy.</span>
                     </div>
                     <div className="text-2xl font-bold text-white">{stats.averageAccuracy.toFixed(1)}%</div>
                   </CardContent>
@@ -129,7 +198,46 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
                       <span className="text-promptfighter-neon font-semibold">Classement</span>
                     </div>
                     <div className="text-2xl font-bold text-white">#{stats.globalRank}</div>
-                    <div className="text-sm text-white/70">sur {stats.totalUsers} joueurs</div>
+                    <div className="text-sm text-white/70">sur {stats.totalUsers}</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-promptfighter-neon/10 border-promptfighter-neon/30">
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <Vote className="h-6 w-6 text-promptfighter-neon mr-2" />
+                      <span className="text-promptfighter-neon font-semibold">Votes Reçus</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">{stats.totalVotesReceived}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Additional Stats Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="bg-promptfighter-neon/10 border-promptfighter-neon/30">
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <Target className="h-6 w-6 text-promptfighter-neon mr-2" />
+                      <span className="text-promptfighter-neon font-semibold">Victoires</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">{stats.gamesWon}</div>
+                    <div className="text-sm text-white/70">
+                      {stats.totalGames > 0 ? `${((stats.gamesWon / stats.totalGames) * 100).toFixed(1)}%` : '0%'} de victoires
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-promptfighter-neon/10 border-promptfighter-neon/30">
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <TrendingUp className="h-6 w-6 text-promptfighter-neon mr-2" />
+                      <span className="text-promptfighter-neon font-semibold">Score Total</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">
+                      {stats.totalGames > 0 ? (stats.averageAccuracy * stats.totalGames).toFixed(0) : '0'}
+                    </div>
+                    <div className="text-sm text-white/70">Points de précision</div>
                   </CardContent>
                 </Card>
               </div>
@@ -139,11 +247,16 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
                 <div>
                   <h4 className="text-lg font-semibold text-promptfighter-neon mb-3">Précision par Difficulté</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {Object.entries(stats.accuracyByDifficulty).map(([difficulty, accuracy]) => (
+                    {Object.entries(stats.accuracyByDifficulty).map(([difficulty, data]) => (
                       <div key={difficulty} className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
-                        <span className="capitalize text-white/90">{difficulty}</span>
+                        <div>
+                          <span className="capitalize text-white/90 font-medium">
+                            {difficulty === 'easy' ? 'Facile' : difficulty === 'medium' ? 'Moyen' : 'Difficile'}
+                          </span>
+                          <div className="text-xs text-white/60">{data.games} parties</div>
+                        </div>
                         <Badge variant="secondary" className="bg-promptfighter-neon/20 text-promptfighter-neon">
-                          {accuracy.toFixed(1)}%
+                          {data.accuracy.toFixed(1)}%
                         </Badge>
                       </div>
                     ))}
@@ -155,12 +268,17 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
               {Object.keys(stats.accuracyByMode).length > 0 && (
                 <div>
                   <h4 className="text-lg font-semibold text-promptfighter-neon mb-3">Précision par Mode de Jeu</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {Object.entries(stats.accuracyByMode).map(([mode, accuracy]) => (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {Object.entries(stats.accuracyByMode).map(([mode, data]) => (
                       <div key={mode} className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
-                        <span className="capitalize text-white/90">{mode}</span>
+                        <div>
+                          <span className="capitalize text-white/90 font-medium">
+                            {mode === 'solo' ? 'Solo' : mode === 'duel' ? 'Duel' : 'Équipe'}
+                          </span>
+                          <div className="text-xs text-white/60">{data.games} parties</div>
+                        </div>
                         <Badge variant="secondary" className="bg-promptfighter-neon/20 text-promptfighter-neon">
-                          {accuracy.toFixed(1)}%
+                          {data.accuracy.toFixed(1)}%
                         </Badge>
                       </div>
                     ))}
@@ -169,7 +287,11 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
               )}
             </div>
           ) : (
-            <div className="text-center text-white/70">Aucune statistique disponible</div>
+            <div className="text-center text-white/70">
+              <Trophy className="h-12 w-12 mx-auto mb-4 text-promptfighter-neon/50" />
+              <p>Aucune statistique disponible</p>
+              <p className="text-sm mt-2">Jouez votre première partie pour voir vos stats !</p>
+            </div>
           )}
         </CardContent>
       </Card>

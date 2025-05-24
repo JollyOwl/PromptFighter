@@ -106,6 +106,141 @@ export type Database = {
         }
         Relationships: []
       }
+      game_submissions: {
+        Row: {
+          accuracy_score: number | null
+          created_at: string | null
+          id: string
+          image_url: string
+          player_id: string
+          prompt: string
+          room_id: string
+          votes_received: number | null
+        }
+        Insert: {
+          accuracy_score?: number | null
+          created_at?: string | null
+          id?: string
+          image_url: string
+          player_id: string
+          prompt: string
+          room_id: string
+          votes_received?: number | null
+        }
+        Update: {
+          accuracy_score?: number | null
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          player_id?: string
+          prompt?: string
+          room_id?: string
+          votes_received?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_submissions_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_submissions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "game_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          room_id: string
+          submission_id: string
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          room_id: string
+          submission_id: string
+          voter_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          room_id?: string
+          submission_id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_votes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "game_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_votes_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "game_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_votes_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_scores: {
+        Row: {
+          avg_accuracy_score: number | null
+          games_won: number | null
+          id: string
+          player_id: string
+          total_accuracy_score: number | null
+          total_games: number | null
+          total_votes_received: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avg_accuracy_score?: number | null
+          games_won?: number | null
+          id?: string
+          player_id: string
+          total_accuracy_score?: number | null
+          total_games?: number | null
+          total_votes_received?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avg_accuracy_score?: number | null
+          games_won?: number | null
+          id?: string
+          player_id?: string
+          total_accuracy_score?: number | null
+          total_games?: number | null
+          total_votes_received?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_scores_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
