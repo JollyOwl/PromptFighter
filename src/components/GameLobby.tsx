@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -118,6 +119,8 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
     }
     
     try {
+      console.log('Creating room:', { roomName, selectedGameMode, selectedDifficulty, maxPlayers });
+      
       const room = await createGameRoom(
         roomName,
         selectedGameMode,
@@ -127,6 +130,7 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
       );
       
       if (room) {
+        console.log('Room created successfully:', room);
         setCurrentRoom(room);
         setIsCreatingRoom(false); // Close the creation modal
         toast.success(`Room "${roomName}" created successfully!`);
@@ -138,6 +142,9 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
             handleStartGame();
           }, 1000);
         }
+      } else {
+        console.error('Room creation returned null');
+        toast.error('Failed to create room - no room returned');
       }
     } catch (error) {
       console.error('Error creating room:', error);
@@ -152,8 +159,11 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
     }
     
     try {
+      console.log('Joining room with code:', joinCode);
+      
       const room = await joinGameRoom(joinCode, user);
       if (room) {
+        console.log('Joined room successfully:', room);
         setCurrentRoom(room);
         setIsCreatingRoom(false); // Close the creation modal
         toast.success(`You joined ${room.name}!`);
@@ -165,6 +175,9 @@ const GameLobby = ({ onShowRules }: GameLobbyProps) => {
             handleStartGame();
           }, 1000);
         }
+      } else {
+        console.error('Room join returned null');
+        toast.error('Failed to join room - no room returned');
       }
     } catch (error) {
       console.error('Error joining room:', error);
