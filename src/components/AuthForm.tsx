@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,24 +8,7 @@ import { signIn, signUp } from "@/lib/auth";
 import { useGameStore } from "@/store/gameStore";
 import { toast } from "sonner";
 import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
-
-const avatars = [{
-  id: 1,
-  url: "/placeholder.svg",
-  name: "Avatar 1"
-}, {
-  id: 2,
-  url: "/placeholder.svg",
-  name: "Avatar 2"
-}, {
-  id: 3,
-  url: "/placeholder.svg",
-  name: "Avatar 3"
-}, {
-  id: 4,
-  url: "/placeholder.svg",
-  name: "Avatar 4"
-}];
+import { avatarStyles, generateAvatarUrl } from "@/utils/avatarUtils";
 
 interface AuthFormProps {
   onLogin: () => void;
@@ -36,7 +18,7 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState(1);
+  const [selectedAvatarId, setSelectedAvatarId] = useState(1);
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -56,22 +38,25 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
           setCurrentPlayer({
             id: user.id,
             username: emailOrUsername.includes('@') ? emailOrUsername.split('@')[0] : emailOrUsername,
-            avatar_url: "/placeholder.svg"
+            avatar_url: user.avatar_url || generateAvatarUrl(avatarStyles[0].style, avatarStyles[0].seed)
           });
           onLogin();
         }
       } else {
+        const selectedAvatar = avatarStyles.find(a => a.id === selectedAvatarId);
+        const avatarUrl = selectedAvatar ? generateAvatarUrl(selectedAvatar.style, selectedAvatar.seed) : generateAvatarUrl(avatarStyles[0].style, avatarStyles[0].seed);
+        
         const result = await signUp({
           email: emailOrUsername,
           password,
           username,
-          avatar_id: selectedAvatar
+          avatar_id: selectedAvatarId
         });
         if (result.user) {
           setCurrentPlayer({
             id: result.user.id,
             username: username,
-            avatar_url: result.profile.avatar_url
+            avatar_url: avatarUrl
           });
           onLogin();
         }
@@ -215,20 +200,23 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
           <div className="space-y-2">
             <Label className="text-white">Choisissez un avatar</Label>
             <div className="grid grid-cols-4 gap-4 mt-2">
-              {avatars.map(avatar => (
-                <Avatar 
-                  key={avatar.id} 
-                  className={`w-16 h-16 cursor-pointer transition-all ${
-                    selectedAvatar === avatar.id ? "ring-4 ring-promptfighter-cyan" : "opacity-70 hover:opacity-100"
-                  }`} 
-                  onClick={() => setSelectedAvatar(avatar.id)}
-                >
-                  <AvatarImage src={avatar.url} alt={avatar.name} />
-                  <AvatarFallback className="bg-promptfighter-lavender">
-                    {avatar.name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
+              {avatarStyles.map(avatar => {
+                const avatarUrl = generateAvatarUrl(avatar.style, avatar.seed);
+                return (
+                  <Avatar 
+                    key={avatar.id} 
+                    className={`w-16 h-16 cursor-pointer transition-all ${
+                      selectedAvatarId === avatar.id ? "ring-4 ring-promptfighter-cyan" : "opacity-70 hover:opacity-100"
+                    }`} 
+                    onClick={() => setSelectedAvatarId(avatar.id)}
+                  >
+                    <AvatarImage src={avatarUrl} alt={avatar.name} />
+                    <AvatarFallback className="bg-promptfighter-lavender">
+                      {avatar.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                );
+              })}
             </div>
           </div>
           

@@ -9,13 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useGameStore } from '@/store/gameStore';
 import { Loader2 } from 'lucide-react';
-
-const avatars = [
-  { id: 1, url: "/placeholder.svg", name: "Avatar 1" },
-  { id: 2, url: "/placeholder.svg", name: "Avatar 2" },
-  { id: 3, url: "/placeholder.svg", name: "Avatar 3" },
-  { id: 4, url: "/placeholder.svg", name: "Avatar 4" }
-];
+import { avatarStyles, generateAvatarUrl, getAvatarIdFromUrl } from '@/utils/avatarUtils';
 
 interface ProfileEditModalProps {
   onClose: () => void;
@@ -26,7 +20,12 @@ const ProfileEditModal = ({ onClose, onUserUpdate }: ProfileEditModalProps) => {
   const { user } = useAuth();
   const { setCurrentPlayer } = useGameStore();
   const [username, setUsername] = useState(user?.username || '');
-  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar_url || "/placeholder.svg");
+  const [selectedAvatarId, setSelectedAvatarId] = useState(() => {
+    if (user?.avatar_url) {
+      return getAvatarIdFromUrl(user.avatar_url);
+    }
+    return 1;
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,9 +38,12 @@ const ProfileEditModal = ({ onClose, onUserUpdate }: ProfileEditModalProps) => {
     setLoading(true);
     
     try {
+      const selectedAvatar = avatarStyles.find(a => a.id === selectedAvatarId);
+      const avatarUrl = selectedAvatar ? generateAvatarUrl(selectedAvatar.style, selectedAvatar.seed) : generateAvatarUrl(avatarStyles[0].style, avatarStyles[0].seed);
+
       const updatedUser = await updateProfile({
         username: username.trim(),
-        avatar_url: selectedAvatar
+        avatar_url: avatarUrl
       });
 
       // Update the current player in the game store
@@ -103,22 +105,25 @@ const ProfileEditModal = ({ onClose, onUserUpdate }: ProfileEditModalProps) => {
             <div className="space-y-3">
               <Label className="text-white">Avatar</Label>
               <div className="grid grid-cols-4 gap-3">
-                {avatars.map((avatar) => (
-                  <Avatar
-                    key={avatar.id}
-                    className={`w-16 h-16 cursor-pointer transition-all ${
-                      selectedAvatar === avatar.url
-                        ? "ring-2 ring-promptfighter-neon"
-                        : "opacity-70 hover:opacity-100"
-                    }`}
-                    onClick={() => setSelectedAvatar(avatar.url)}
-                  >
-                    <AvatarImage src={avatar.url} alt={avatar.name} />
-                    <AvatarFallback className="bg-promptfighter-neon/20 text-promptfighter-neon">
-                      {avatar.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
+                {avatarStyles.map((avatar) => {
+                  const avatarUrl = generateAvatarUrl(avatar.style, avatar.seed);
+                  return (
+                    <Avatar
+                      key={avatar.id}
+                      className={`w-16 h-16 cursor-pointer transition-all ${
+                        selectedAvatarId === avatar.id
+                          ? "ring-2 ring-promptfighter-neon"
+                          : "opacity-70 hover:opacity-100"
+                      }`}
+                      onClick={() => setSelectedAvatarId(avatar.id)}
+                    >
+                      <AvatarImage src={avatarUrl} alt={avatar.name} />
+                      <AvatarFallback className="bg-promptfighter-neon/20 text-promptfighter-neon">
+                        {avatar.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                  );
+                })}
               </div>
             </div>
 
