@@ -297,7 +297,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      auto_advance_timed_out_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          room_id: string
+          old_phase: string
+          new_phase: string
+        }[]
+      }
+      check_voting_completion: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          room_id: string
+          advanced: boolean
+        }[]
+      }
+      update_game_phase: {
+        Args: { p_room_id: string; p_new_phase: string; p_duration?: number }
+        Returns: {
+          success: boolean
+          message: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
