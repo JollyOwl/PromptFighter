@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
           setCurrentPlayer({
             id: user.id,
             username: emailOrUsername.includes('@') ? emailOrUsername.split('@')[0] : emailOrUsername,
-            avatar_url: user.avatar_url || generateAvatarUrl(avatarStyles[0].style, avatarStyles[0].seed)
+            avatar_url: generateAvatarUrl(avatarStyles[0].style, avatarStyles[0].seed)
           });
           onLogin();
         }
