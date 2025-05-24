@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,18 +27,29 @@ interface UserProfileProps {
 
 const UserProfile = ({ onClose }: UserProfileProps) => {
   const { user } = useAuth();
+  const [currentUser, setCurrentUser] = useState(user);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchUserStats();
-    }
+    setCurrentUser(user);
   }, [user]);
 
+  useEffect(() => {
+    if (currentUser) {
+      fetchUserStats();
+    }
+  }, [currentUser]);
+
+  const handleUserUpdate = async (updatedUser: any) => {
+    setCurrentUser(updatedUser);
+    // Refresh stats with updated user data
+    await fetchUserStats();
+  };
+
   const fetchUserStats = async () => {
-    if (!user) return;
+    if (!currentUser) return;
     
     try {
       setLoading(true);
@@ -45,7 +58,7 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
       const { data: playerScores } = await supabase
         .from('player_scores')
         .select('*')
-        .eq('player_id', user.id)
+        .eq('player_id', currentUser.id)
         .maybeSingle();
 
       // Get detailed submission stats grouped by difficulty and mode
@@ -55,15 +68,13 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
           accuracy_score,
           game_rooms!inner(difficulty, game_mode)
         `)
-        .eq('player_id', user.id);
+        .eq('player_id', currentUser.id);
 
-      // Get global ranking
       const { data: allScores } = await supabase
         .from('player_scores')
         .select('player_id, avg_accuracy_score')
         .order('avg_accuracy_score', { ascending: false });
 
-      // Calculate stats by difficulty
       const accuracyByDifficulty: Record<string, { accuracy: number; games: number }> = {};
       const accuracyByMode: Record<string, { accuracy: number; games: number }> = {};
 
@@ -74,14 +85,12 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
           const mode = roomData.game_mode;
           const score = submission.accuracy_score;
 
-          // Group by difficulty
           if (!accuracyByDifficulty[difficulty]) {
             accuracyByDifficulty[difficulty] = { accuracy: 0, games: 0 };
           }
           accuracyByDifficulty[difficulty].accuracy += score;
           accuracyByDifficulty[difficulty].games += 1;
 
-          // Group by mode
           if (!accuracyByMode[mode]) {
             accuracyByMode[mode] = { accuracy: 0, games: 0 };
           }
@@ -89,7 +98,6 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
           accuracyByMode[mode].games += 1;
         });
 
-        // Calculate averages
         Object.keys(accuracyByDifficulty).forEach(key => {
           const data = accuracyByDifficulty[key];
           data.accuracy = data.accuracy / data.games;
@@ -101,11 +109,10 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
         });
       }
 
-      // Calculate global rank
       let globalRank = 1;
       const userScore = playerScores?.avg_accuracy_score || 0;
       if (allScores) {
-        globalRank = allScores.findIndex(score => score.player_id === user.id) + 1;
+        globalRank = allScores.findIndex(score => score.player_id === currentUser.id) + 1;
         if (globalRank === 0) globalRank = allScores.length + 1;
       }
 
@@ -128,7 +135,7 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
     }
   };
 
-  if (!user) return null;
+  if (!currentUser) return null;
 
   return (
     <>
@@ -157,21 +164,21 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
             {/* User Info Section */}
             <div className="flex items-center space-x-4 mb-6">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={user.avatar_url} alt={user.username} />
+                <AvatarImage src={currentUser.avatar_url} alt={currentUser.username} />
                 <AvatarFallback className="bg-promptfighter-neon/20 text-promptfighter-neon text-lg">
-                  {user.username.charAt(0).toUpperCase()}
+                  {currentUser.username.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="text-xl font-bold text-promptfighter-neon">{user.username}</h3>
+                <h3 className="text-xl font-bold text-promptfighter-neon">{currentUser.username}</h3>
                 <div className="flex items-center space-x-2 text-white/70">
                   <Mail className="h-4 w-4" />
-                  <span>{user.email}</span>
+                  <span>{currentUser.email}</span>
                 </div>
-                {user.created_at && (
+                {currentUser.created_at && (
                   <div className="flex items-center space-x-2 text-white/70">
                     <Calendar className="h-4 w-4" />
-                    <span>Inscrit le {new Date(user.created_at).toLocaleDateString('fr-FR')}</span>
+                    <span>Inscrit le {new Date(currentUser.created_at).toLocaleDateString('fr-FR')}</span>
                   </div>
                 )}
               </div>
@@ -182,7 +189,6 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
               <div className="text-center text-white/70">Chargement des statistiques...</div>
             ) : stats ? (
               <div className="space-y-6">
-                {/* Overall Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card className="bg-promptfighter-neon/10 border-promptfighter-neon/30">
                     <CardContent className="p-4 text-center">
@@ -226,7 +232,6 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
                   </Card>
                 </div>
 
-                {/* Additional Stats Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="bg-promptfighter-neon/10 border-promptfighter-neon/30">
                     <CardContent className="p-4 text-center">
@@ -255,7 +260,6 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
                   </Card>
                 </div>
 
-                {/* Accuracy by Difficulty */}
                 {Object.keys(stats.accuracyByDifficulty).length > 0 && (
                   <div>
                     <h4 className="text-lg font-semibold text-promptfighter-neon mb-3">Précision par Difficulté</h4>
@@ -277,7 +281,6 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
                   </div>
                 )}
 
-                {/* Accuracy by Game Mode */}
                 {Object.keys(stats.accuracyByMode).length > 0 && (
                   <div>
                     <h4 className="text-lg font-semibold text-promptfighter-neon mb-3">Précision par Mode de Jeu</h4>
@@ -312,7 +315,10 @@ const UserProfile = ({ onClose }: UserProfileProps) => {
 
       {/* Profile Edit Modal */}
       {showEditModal && (
-        <ProfileEditModal onClose={() => setShowEditModal(false)} />
+        <ProfileEditModal 
+          onClose={() => setShowEditModal(false)} 
+          onUserUpdate={handleUserUpdate}
+        />
       )}
     </>
   );

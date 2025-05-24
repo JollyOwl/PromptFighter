@@ -1,4 +1,3 @@
-
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -11,13 +10,18 @@ import { LogOut, User } from "lucide-react";
 import { signOut } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameStore } from "@/store/gameStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import UserProfile from "./UserProfile";
 
 const Navbar = () => {
   const { user } = useAuth();
   const { setCurrentPlayer } = useGameStore();
   const [showProfile, setShowProfile] = useState(false);
+
+  // Close profile modal when user changes (login/logout)
+  useEffect(() => {
+    setShowProfile(false);
+  }, [user]);
 
   const handleLogout = async () => {
     try {

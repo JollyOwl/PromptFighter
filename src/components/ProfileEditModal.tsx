@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { updateProfile } from '@/lib/auth';
+import { updateProfile, getCurrentUser } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,10 @@ const avatars = [
 
 interface ProfileEditModalProps {
   onClose: () => void;
+  onUserUpdate?: (user: any) => void;
 }
 
-const ProfileEditModal = ({ onClose }: ProfileEditModalProps) => {
+const ProfileEditModal = ({ onClose, onUserUpdate }: ProfileEditModalProps) => {
   const { user } = useAuth();
   const { setCurrentPlayer } = useGameStore();
   const [username, setUsername] = useState(user?.username || '');
@@ -49,6 +50,12 @@ const ProfileEditModal = ({ onClose }: ProfileEditModalProps) => {
         username: updatedUser.username,
         avatar_url: updatedUser.avatar_url
       });
+
+      // Refresh user data to update the UI immediately
+      const refreshedUser = await getCurrentUser();
+      if (refreshedUser && onUserUpdate) {
+        onUserUpdate(refreshedUser);
+      }
 
       onClose();
     } catch (error) {
