@@ -49,7 +49,7 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
     try {
       if (isLogin) {
         const user = await signIn({
-          email: emailOrUsername, // This now accepts both email and username
+          email: emailOrUsername, // For now, only email login works
           password
         });
         if (user) {
@@ -101,17 +101,20 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
       <TabsContent value="login">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="emailOrUsername" className="text-white">Email ou Pseudo</Label>
+            <Label htmlFor="emailOrUsername" className="text-white">Email</Label>
             <Input 
               id="emailOrUsername" 
-              type="text" 
-              placeholder="vous@exemple.com ou votre pseudo" 
+              type="email" 
+              placeholder="vous@exemple.com" 
               value={emailOrUsername} 
               onChange={e => setEmailOrUsername(e.target.value)} 
               required 
               disabled={loading} 
               className="bg-white/30 border-white/20 text-white placeholder:text-white/60" 
             />
+            <p className="text-xs text-white/60">
+              Veuillez utiliser votre adresse email pour vous connecter
+            </p>
           </div>
           
           <div className="space-y-2">

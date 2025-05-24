@@ -29,6 +29,11 @@ export interface SignInCredentials {
   password: string;
 }
 
+export interface UpdateProfileData {
+  username: string;
+  avatar_url?: string;
+}
+
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -142,24 +147,39 @@ export async function signIn({ email, password }: SignInCredentials) {
       password
     });
     
-    // If email login fails, try with username
+    // If email login fails, try with username by looking up the email
     if (signInResult.error && !email.includes('@')) {
+      console.log("Trying username login for:", email);
+      
       // Look up user by username to get their email
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
         .eq('username', email)
         .single();
       
+      if (profileError) {
+        console.error("Username lookup failed:", profileError);
+        throw new Error("Nom d'utilisateur ou mot de passe incorrect");
+      }
+      
       if (profile) {
-        // Get the user's email from auth.users
-        const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
-        if (userData.user) {
-          signInResult = await supabase.auth.signInWithPassword({
-            email: userData.user.email!,
-            password
-          });
+        // Get the user's email from the profiles table by looking up auth user
+        const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+        
+        // We need to use a different approach - get all profiles and match
+        const { data: allProfiles, error: allProfilesError } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .eq('username', email);
+          
+        if (allProfilesError || !allProfiles || allProfiles.length === 0) {
+          throw new Error("Nom d'utilisateur introuvable");
         }
+        
+        // For username login, we need to get the email from auth.users
+        // Since we can't access auth.users directly, we'll need the user to use email
+        throw new Error("Veuillez utiliser votre adresse email pour vous connecter");
       }
     }
     
@@ -173,6 +193,66 @@ export async function signIn({ email, password }: SignInCredentials) {
   } catch (error: unknown) {
     console.error("Erreur lors de la connexion:", error);
     toast.error(error instanceof Error ? error.message : "Échec de la connexion");
+    throw error;
+  }
+}
+
+export async function updateProfile({ username, avatar_url }: UpdateProfileData): Promise<AuthUser> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error("Utilisateur non connecté");
+    }
+
+    // Check if username is already taken by another user
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username)
+      .neq('id', user.id)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error("Erreur lors de la vérification du nom d'utilisateur:", checkError);
+      throw checkError;
+    }
+
+    if (existingProfile) {
+      throw new Error("Ce nom d'utilisateur est déjà pris");
+    }
+
+    // Update the profile
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        username,
+        avatar_url,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Erreur lors de la mise à jour du profil:", updateError);
+      throw updateError;
+    }
+
+    toast.success("Profil mis à jour avec succès !");
+
+    // Return the updated user data
+    return {
+      id: user.id,
+      email: user.email!,
+      username: updatedProfile.username,
+      avatar_url: updatedProfile.avatar_url,
+      created_at: updatedProfile.created_at,
+      user_metadata: user.user_metadata
+    };
+  } catch (error: unknown) {
+    console.error("Erreur lors de la mise à jour du profil:", error);
+    toast.error(error instanceof Error ? error.message : "Échec de la mise à jour du profil");
     throw error;
   }
 }
