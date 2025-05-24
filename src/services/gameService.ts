@@ -117,22 +117,41 @@ export const joinGameRoom = async (
   user: AuthUser
 ): Promise<GameRoom | null> => {
   try {
+    console.log('Attempting to join room with code:', joinCode, 'User:', user.id);
+    
     // Find room by join code
     const { data: roomData, error: roomError } = await supabase
       .from('game_rooms')
-      .select()
-      .eq('join_code', joinCode)
+      .select('*')
+      .eq('join_code', joinCode.toUpperCase())
+      .eq('status', 'waiting') // Only allow joining waiting rooms
       .single();
     
-    if (roomError) throw roomError;
+    if (roomError) {
+      console.error('Room lookup error:', roomError);
+      if (roomError.code === 'PGRST116') {
+        toast.error('Room not found or no longer available');
+      } else {
+        toast.error('Failed to find room');
+      }
+      return null;
+    }
     
-    // Check if room is full
+    console.log('Found room:', roomData);
+    
+    // Check current player count
     const { data: playersData, error: countError } = await supabase
       .from('game_players')
-      .select('user_id', { count: 'exact' })
+      .select('user_id')
       .eq('room_id', roomData.id);
     
-    if (countError) throw countError;
+    if (countError) {
+      console.error('Error counting players:', countError);
+      toast.error('Failed to check room capacity');
+      return null;
+    }
+    
+    console.log('Current players in room:', playersData);
     
     if (playersData.length >= roomData.max_players) {
       toast.error('Room is full');
@@ -141,6 +160,7 @@ export const joinGameRoom = async (
     
     // Check if user is already in the room
     const alreadyJoined = playersData.some(p => p.user_id === user.id);
+    console.log('User already in room:', alreadyJoined);
     
     if (!alreadyJoined) {
       // Add user as player
@@ -151,15 +171,21 @@ export const joinGameRoom = async (
           user_id: user.id
         });
       
-      if (joinError) throw joinError;
+      if (joinError) {
+        console.error('Error adding player to room:', joinError);
+        toast.error('Failed to join room');
+        return null;
+      }
+      
+      console.log('Successfully added player to room');
     }
     
-    // Get all players in the room
-    const { data: players, error: playersError } = await supabase
+    // Get all players in the room with their profiles
+    const { data: playersWithProfiles, error: playersError } = await supabase
       .from('game_players')
       .select(`
         user_id,
-        profiles:user_id (
+        profiles!inner(
           id,
           username,
           avatar_url
@@ -167,26 +193,48 @@ export const joinGameRoom = async (
       `)
       .eq('room_id', roomData.id);
     
-    if (playersError) throw playersError;
+    if (playersError) {
+      console.error('Error fetching players with profiles:', playersError);
+      // Fallback: create player list without profile data
+      const fallbackPlayers: Player[] = playersData.map(p => ({
+        id: p.user_id,
+        username: p.user_id === user.id ? (user.username || 'You') : 'Player',
+        avatar_url: p.user_id === user.id ? user.avatar_url : undefined
+      }));
+      
+      console.log('Using fallback player list:', fallbackPlayers);
+      
+      // Get target image for the room
+      let targetImage: TargetImage | null = null;
+      if (roomData.target_image_url) {
+        const { data: imageData } = await supabase
+          .from('target_images')
+          .select('*')
+          .eq('url', roomData.target_image_url)
+          .maybeSingle();
+        
+        if (imageData) {
+          targetImage = imageData as TargetImage;
+        }
+      }
+      
+      const room: GameRoom = {
+        ...roomData,
+        target_image: targetImage,
+        players: fallbackPlayers
+      };
+      
+      return room;
+    }
     
     // Map player profiles correctly
-    const mappedPlayers: Player[] = players.map(p => {
-      // Check if profiles data is available
-      if (p.profiles) {
-        return {
-          id: (p.profiles as any).id,
-          username: (p.profiles as any).username || 'Player',
-          avatar_url: (p.profiles as any).avatar_url
-        };
-      } else {
-        // Fallback if profile is not found
-        return {
-          id: p.user_id,
-          username: 'Player',
-          avatar_url: undefined
-        };
-      }
-    });
+    const mappedPlayers: Player[] = playersWithProfiles.map(p => ({
+      id: p.profiles.id,
+      username: p.profiles.username || 'Player',
+      avatar_url: p.profiles.avatar_url
+    }));
+    
+    console.log('Mapped players:', mappedPlayers);
     
     // Get target image for the room
     let targetImage: TargetImage | null = null;
@@ -208,6 +256,7 @@ export const joinGameRoom = async (
       players: mappedPlayers
     };
     
+    console.log('Final room object:', room);
     return room;
   } catch (error) {
     console.error('Error joining game room:', error);
