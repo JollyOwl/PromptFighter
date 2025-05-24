@@ -51,11 +51,16 @@ const ProfileEditModal = ({ onClose, onUserUpdate }: ProfileEditModalProps) => {
         avatar_url: updatedUser.avatar_url
       });
 
-      // Refresh user data to update the UI immediately
+      // Force refresh of auth context by calling getCurrentUser again
       const refreshedUser = await getCurrentUser();
-      if (refreshedUser && onUserUpdate) {
+      
+      // Call the callback to update parent component
+      if (onUserUpdate && refreshedUser) {
         onUserUpdate(refreshedUser);
       }
+
+      // Trigger a manual auth state change to refresh all components using useAuth
+      window.dispatchEvent(new CustomEvent('authUserUpdated', { detail: refreshedUser }));
 
       onClose();
     } catch (error) {
